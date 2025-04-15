@@ -1,0 +1,13 @@
+[package]
+name = "weasel"
+version = "0.1.0"
+edition = "2021"
+description = "Smart Contract Static Analysis Tool"
+authors = ["slvDev"]
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+chrono = "0.4"
