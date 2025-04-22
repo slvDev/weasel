@@ -1,6 +1,32 @@
 use serde::{Deserialize, Serialize};
-use solang_parser::pt::SourceUnit;
+use solang_parser::pt::{ContractTy, SourceUnit};
 use std::path::PathBuf;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ContractTyInfo {
+    Abstract,
+    Contract,
+    Interface,
+    Library,
+}
+
+// Convert from ContractTy since it's not serializable
+impl From<&ContractTy> for ContractTyInfo {
+    fn from(ty: &ContractTy) -> Self {
+        match ty {
+            ContractTy::Abstract(_) => ContractTyInfo::Abstract,
+            ContractTy::Contract(_) => ContractTyInfo::Contract,
+            ContractTy::Interface(_) => ContractTyInfo::Interface,
+            ContractTy::Library(_) => ContractTyInfo::Library,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContractDefinitionInfo {
+    pub name: String,
+    pub ty: ContractTyInfo,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SolidityFile {
@@ -8,9 +34,7 @@ pub struct SolidityFile {
     pub content: String,
 
     pub solidity_version: Option<String>,
-    pub contracts: Vec<String>,
-    pub interfaces: Vec<String>,
-    pub libraries: Vec<String>,
+    pub contract_definitions: Vec<ContractDefinitionInfo>,
 
     #[serde(skip)]
     pub source_unit: Option<SourceUnit>,
@@ -23,32 +47,20 @@ impl SolidityFile {
             content,
             source_unit: None,
             solidity_version: None,
-            contracts: Vec::new(),
-            interfaces: Vec::new(),
-            libraries: Vec::new(),
+            contract_definitions: Vec::new(),
         }
     }
 
-    pub fn with_version(mut self, version: String) -> Self {
-        self.solidity_version = Some(version);
-        self
+    pub fn set_solidity_version(&mut self, version: Option<String>) {
+        self.solidity_version = version;
     }
 
-    pub fn add_contract(&mut self, name: String) {
-        self.contracts.push(name);
+    pub fn set_contract_definitions(&mut self, definitions: Vec<ContractDefinitionInfo>) {
+        self.contract_definitions = definitions;
     }
 
-    pub fn add_interface(&mut self, name: String) {
-        self.interfaces.push(name);
-    }
-
-    pub fn add_library(&mut self, name: String) {
-        self.libraries.push(name);
-    }
-
-    pub fn with_source_unit(mut self, source_unit: SourceUnit) -> Self {
+    pub fn set_source_unit_ast(&mut self, source_unit: SourceUnit) {
         self.source_unit = Some(source_unit);
-        self
     }
 }
 
