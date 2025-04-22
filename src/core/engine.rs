@@ -34,7 +34,12 @@ impl AnalysisEngine {
         // not implemented
 
         // Non-critical detectors
-        self.register_detector(Arc::new(crate::detectors::nc::ArrayIndicesDetector::new()));
+        self.register_detector(Arc::new(
+            crate::detectors::nc::ArrayIndicesDetector::default(),
+        ));
+        self.register_detector(Arc::new(
+            crate::detectors::nc::AbiEncodeCallDetector::default(),
+        ));
 
         // Gas optimization detectors
         // not implemented
