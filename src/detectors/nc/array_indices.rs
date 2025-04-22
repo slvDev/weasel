@@ -67,3 +67,51 @@ impl Detector for ArrayIndicesDetector {
         });
     }
 }
+
+// --- Unit Tests ---
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::test_utils::run_detector_on_code;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_array_indices_detection() {
+        let code = r#"
+            contract Test {
+                uint[] arr;
+                uint indexVar = 2;
+
+                function foo() public {
+                    arr[0] = 1;         // Positive
+                    arr[1] = 2;         // Positive
+                    arr[indexVar] = 3;  // Negative
+                }
+            }
+        "#;
+
+        let detector = Arc::new(ArrayIndicesDetector::new());
+        let locations = run_detector_on_code(detector, code, "test.sol");
+
+        assert_eq!(locations.len(), 2, "Should detect only 2 locations");
+
+        assert_eq!(locations[0].line, 7, "Line number for arr[0] should be 7");
+        assert_eq!(locations[1].line, 8, "Line number for arr[1] should be 8");
+        assert!(
+            locations[0]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .contains("arr[0]"),
+            "Snippet for arr[0] is incorrect"
+        );
+        assert!(
+            locations[1]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .contains("arr[1]"),
+            "Snippet for arr[1] is incorrect"
+        );
+    }
+}
