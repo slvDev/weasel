@@ -6,17 +6,9 @@ use crate::utils::location::loc_to_location;
 use solang_parser::pt::Expression;
 use std::sync::{Arc, Mutex};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ArrayIndicesDetector {
     locations: Arc<Mutex<Vec<Location>>>,
-}
-
-impl ArrayIndicesDetector {
-    pub fn new() -> Self {
-        Self {
-            locations: Arc::new(Mutex::new(Vec::new())),
-        }
-    }
 }
 
 impl Detector for ArrayIndicesDetector {
@@ -90,7 +82,7 @@ mod tests {
             }
         "#;
 
-        let detector = Arc::new(ArrayIndicesDetector::new());
+        let detector = Arc::new(ArrayIndicesDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
 
         assert_eq!(locations.len(), 2, "Should detect only 2 locations");
