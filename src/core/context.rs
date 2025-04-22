@@ -108,7 +108,7 @@ fn extract_solidity_version_from_pragma(pragma: &PragmaDirective) -> Option<Stri
 }
 
 /// Extracts top-level metadata (version, contracts) from a SourceUnit.
-fn extract_file_metadata(
+pub fn extract_file_metadata(
     source_unit: &SourceUnit,
 ) -> (Option<String>, Vec<ContractDefinitionInfo>) {
     let mut found_version: Option<String> = None;
