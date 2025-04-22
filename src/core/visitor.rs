@@ -1,9 +1,11 @@
 use crate::models::SolidityFile;
 use solang_parser::pt::{
-    ContractDefinition, Expression, FunctionDefinition, SourceUnit, Statement, VariableDefinition,
+    ContractDefinition, Expression, FunctionDefinition, SourceUnit, SourceUnitPart, Statement,
+    VariableDefinition,
 };
 pub struct ASTVisitor {
     source_unit_callbacks: Vec<Box<dyn Fn(&SourceUnit, &SolidityFile) + Send + Sync>>,
+    source_unit_part_callbacks: Vec<Box<dyn Fn(&SourceUnitPart, &SolidityFile) + Send + Sync>>,
     contract_callbacks: Vec<Box<dyn Fn(&ContractDefinition, &SolidityFile) + Send + Sync>>,
     function_callbacks: Vec<Box<dyn Fn(&FunctionDefinition, &SolidityFile) + Send + Sync>>,
     variable_callbacks: Vec<Box<dyn Fn(&VariableDefinition, &SolidityFile) + Send + Sync>>,
@@ -15,6 +17,7 @@ impl ASTVisitor {
     pub fn new() -> Self {
         Self {
             source_unit_callbacks: Vec::new(),
+            source_unit_part_callbacks: Vec::new(),
             contract_callbacks: Vec::new(),
             function_callbacks: Vec::new(),
             variable_callbacks: Vec::new(),
@@ -28,6 +31,13 @@ impl ASTVisitor {
         F: Fn(&SourceUnit, &SolidityFile) + Send + Sync + 'static,
     {
         self.source_unit_callbacks.push(Box::new(callback));
+    }
+
+    pub fn on_source_unit_part<F>(&mut self, callback: F)
+    where
+        F: Fn(&SourceUnitPart, &SolidityFile) + Send + Sync + 'static,
+    {
+        self.source_unit_part_callbacks.push(Box::new(callback));
     }
 
     pub fn on_contract<F>(&mut self, callback: F)
@@ -70,19 +80,22 @@ impl ASTVisitor {
             callback(source_unit, file);
         }
 
-        // Traverse source unit parts
         for part in &source_unit.0 {
+            for callback in &self.source_unit_part_callbacks {
+                callback(part, file);
+            }
+
             match part {
-                solang_parser::pt::SourceUnitPart::ContractDefinition(contract) => {
+                SourceUnitPart::ContractDefinition(contract) => {
                     self.visit_contract(contract, file);
                 }
-                solang_parser::pt::SourceUnitPart::FunctionDefinition(function) => {
+                SourceUnitPart::FunctionDefinition(function) => {
                     self.visit_function(function, file);
                 }
-                solang_parser::pt::SourceUnitPart::VariableDefinition(variable) => {
+                SourceUnitPart::VariableDefinition(variable) => {
                     self.visit_variable(variable, file);
                 }
-                _ => {} // Ignore other parts for now
+                _ => {}
             }
         }
     }
@@ -108,7 +121,7 @@ impl ASTVisitor {
                 solang_parser::pt::ContractPart::VariableDefinition(variable) => {
                     self.visit_variable(variable, file);
                 }
-                _ => {} // Ignore other parts for now
+                _ => {}
             }
         }
     }
