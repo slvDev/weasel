@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use solang_parser::pt::SourceUnit;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,8 +12,8 @@ pub struct SolidityFile {
     pub interfaces: Vec<String>,
     pub libraries: Vec<String>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ast: Option<String>,
+    #[serde(skip)]
+    pub source_unit: Option<SourceUnit>,
 }
 
 impl SolidityFile {
@@ -20,7 +21,7 @@ impl SolidityFile {
         Self {
             path,
             content,
-            ast: None,
+            source_unit: None,
             solidity_version: None,
             contracts: Vec::new(),
             interfaces: Vec::new(),
@@ -45,8 +46,8 @@ impl SolidityFile {
         self.libraries.push(name);
     }
 
-    pub fn with_ast(mut self, ast: String) -> Self {
-        self.ast = Some(ast);
+    pub fn with_source_unit(mut self, source_unit: SourceUnit) -> Self {
+        self.source_unit = Some(source_unit);
         self
     }
 }
