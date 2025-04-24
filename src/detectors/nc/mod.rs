@@ -4,6 +4,7 @@
 pub mod abi_encode_call;
 pub mod abicoder_v2;
 pub mod array_indices;
+pub mod console_log_import;
 pub mod constant_case;
 pub mod default_visibility;
 pub mod magic_numbers;
@@ -15,6 +16,7 @@ pub mod while_true_loop;
 pub use abi_encode_call::AbiEncodeCallDetector;
 pub use abicoder_v2::UnnecessaryAbiCoderV2Detector;
 pub use array_indices::ArrayIndicesDetector;
+pub use console_log_import::ConsoleLogImportDetector;
 pub use constant_case::ConstantCaseDetector;
 pub use default_visibility::DefaultVisibilityDetector;
 pub use magic_numbers::MagicNumberDetector;

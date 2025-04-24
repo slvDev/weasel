@@ -64,6 +64,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::nc::DefaultVisibilityDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::nc::ConsoleLogImportDetector::default(),
+        ));
 
         // Gas optimization detectors
         // not implemented
