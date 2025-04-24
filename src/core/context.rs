@@ -4,7 +4,7 @@
 use crate::models::{ContractDefinitionInfo, ScopeFiles, SolidityFile};
 use solang_parser::{
     parse,
-    pt::{PragmaDirective, SourceUnit, SourceUnitPart, VersionComparator},
+    pt::{PragmaDirective, SourceUnit, SourceUnitPart, VersionComparator, VersionOp},
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -81,26 +81,58 @@ fn is_solidity_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-/// Extracts the solidity version string from a pragma directive.
+/// Formats a VersionOp into its string representation.
+/// Returns None for operators not directly supported by semver::VersionReq.
+fn format_version_op(op: &VersionOp) -> Option<&'static str> {
+    match op {
+        VersionOp::GreaterEq => Some(">="),
+        VersionOp::Greater => Some(">"),
+        VersionOp::LessEq => Some("<="),
+        VersionOp::Less => Some("<"),
+        VersionOp::Exact => Some("="), // Represent plain version, e.g., pragma solidity =0.8.0;
+        VersionOp::Caret => Some("^"),
+        VersionOp::Tilde => Some("~"),
+        VersionOp::Wildcard => {
+            eprintln!(
+                "Warning: Unsupported Solidity version operator '*' found. Cannot process this requirement."
+            );
+            None
+        }
+    }
+}
+
+/// Formats a single VersionComparator into a string suitable for semver parsing.
+/// Returns None if the comparator uses unsupported features (like Or, Wildcard).
+fn format_version_comparator(comp: &VersionComparator) -> Option<String> {
+    match comp {
+        VersionComparator::Plain { version, .. } => Some(version.join(".")),
+        VersionComparator::Operator { op, version, .. } => {
+            format_version_op(op).map(|op_str| format!("{}{}", op_str, version.join(".")))
+        }
+        // Convert Solidity range "A - B" into semver range ">=A <=B"
+        VersionComparator::Range { from, to, .. } => {
+            Some(format!(">= {} <= {}", from.join("."), to.join(".")))
+        }
+        // The semver crate does not support OR logic directly in VersionReq::parse
+        VersionComparator::Or { .. } => None,
+    }
+}
+
+/// Extracts the solidity version requirement string from a pragma directive.
 fn extract_solidity_version_from_pragma(pragma: &PragmaDirective) -> Option<String> {
     match pragma {
-        PragmaDirective::Version(_loc, ident, version_req) => {
-            if ident.name == "solidity" {
-                let version_str = version_req
-                    .iter()
-                    .map(|comp| match comp {
-                        VersionComparator::Operator { op, version, .. } => {
-                            // TODO: Improve VersionOp display
-                            format!("{:?}{}", op, version.join("."))
-                        }
-                        VersionComparator::Plain { version, .. } => version.join("."),
-                        _ => "complex_version_req".to_string(),
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                Some(version_str)
-            } else {
+        PragmaDirective::Version(_loc, ident, version_req) if ident.name == "solidity" => {
+            let mut formatted_parts = Vec::new();
+            for comp in version_req {
+                match format_version_comparator(comp) {
+                    Some(part) => formatted_parts.push(part),
+                    None => return None,
+                }
+            }
+            if formatted_parts.is_empty() {
                 None
+            } else {
+                Some(formatted_parts.join(" "))
             }
         }
         _ => None,
