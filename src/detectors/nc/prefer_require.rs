@@ -3,7 +3,7 @@ use crate::detectors::Detector;
 use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
-use solang_parser::pt::{Expression, Loc};
+use solang_parser::pt::Expression;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Default)]
@@ -35,7 +35,7 @@ impl Detector for PreferRequireDetector {
     }
 
     fn gas_savings(&self) -> Option<usize> {
-        None // Gas difference is pre-0.8.0 behavior, not direct savings from replacement
+        None
     }
 
     fn example(&self) -> Option<String> {
@@ -64,10 +64,8 @@ require(balance >= amount, "Insufficient balance");
 
         visitor.on_expression(move |expr, file| {
             if let Expression::FunctionCall(loc, func_expr, _args) = expr {
-                // Check if the function expression is the identifier 'assert'
                 if let Expression::Variable(ident) = func_expr.as_ref() {
                     if ident.name == "assert" {
-                        // Found a call to assert()
                         detector_arc.add_location(loc_to_location(loc, file));
                     }
                 }
@@ -76,7 +74,6 @@ require(balance >= amount, "Insufficient balance");
     }
 }
 
-// --- Unit Tests ---
 #[cfg(test)]
 mod tests {
     use super::*;
