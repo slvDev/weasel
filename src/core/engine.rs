@@ -44,6 +44,9 @@ impl AnalysisEngine {
             crate::detectors::nc::UnnecessaryAbiCoderV2Detector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::ConstantCaseDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::PreferRequireDetector::default(),
         ));
         self.register_detector(Arc::new(
