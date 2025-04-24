@@ -43,6 +43,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::nc::UnnecessaryAbiCoderV2Detector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::nc::PreferRequireDetector::default(),
+        ));
 
         // Gas optimization detectors
         // not implemented
