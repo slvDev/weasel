@@ -3,6 +3,7 @@ use crate::detectors::Detector;
 use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::utils::version::solidity_version_req_matches;
 use solang_parser::pt::{PragmaDirective, SourceUnitPart};
 use std::sync::{Arc, Mutex};
 
@@ -45,13 +46,12 @@ impl Detector for UnnecessaryAbiCoderV2Detector {
         let detector_arc = self.clone();
 
         visitor.on_source_unit_part(move |part, file| {
-            // TODO: implement more sophisticated version check
-            let is_version_gte_0_8 = match &file.solidity_version {
-                Some(version_str) => version_str.contains("0.8") || version_str.contains("0.9"),
+            let version_is_gte_0_8 = match &file.solidity_version {
+                Some(version_str) => solidity_version_req_matches(version_str, ">=0.8.0"),
                 None => false,
             };
 
-            if !is_version_gte_0_8 {
+            if !version_is_gte_0_8 {
                 return;
             }
 
@@ -67,7 +67,6 @@ impl Detector for UnnecessaryAbiCoderV2Detector {
     }
 }
 
-// --- Unit Tests ---
 #[cfg(test)]
 mod tests {
     use super::*;
