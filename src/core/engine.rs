@@ -47,6 +47,9 @@ impl AnalysisEngine {
             crate::detectors::nc::ConstantCaseDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::MagicNumberDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::PreferRequireDetector::default(),
         ));
         self.register_detector(Arc::new(
