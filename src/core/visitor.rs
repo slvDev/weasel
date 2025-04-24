@@ -1,12 +1,13 @@
 use crate::models::SolidityFile;
 use solang_parser::pt::{
-    ContractDefinition, Expression, FunctionDefinition, SourceUnit, SourceUnitPart, Statement,
-    VariableDefinition,
+    ContractDefinition, ContractPart, Expression, FunctionDefinition, SourceUnit, SourceUnitPart,
+    Statement, VariableDefinition,
 };
 pub struct ASTVisitor {
     source_unit_callbacks: Vec<Box<dyn Fn(&SourceUnit, &SolidityFile) + Send + Sync>>,
     source_unit_part_callbacks: Vec<Box<dyn Fn(&SourceUnitPart, &SolidityFile) + Send + Sync>>,
     contract_callbacks: Vec<Box<dyn Fn(&ContractDefinition, &SolidityFile) + Send + Sync>>,
+    contract_part_callbacks: Vec<Box<dyn Fn(&ContractPart, &SolidityFile) + Send + Sync>>,
     function_callbacks: Vec<Box<dyn Fn(&FunctionDefinition, &SolidityFile) + Send + Sync>>,
     variable_callbacks: Vec<Box<dyn Fn(&VariableDefinition, &SolidityFile) + Send + Sync>>,
     expression_callbacks: Vec<Box<dyn Fn(&Expression, &SolidityFile) + Send + Sync>>,
@@ -19,6 +20,7 @@ impl ASTVisitor {
             source_unit_callbacks: Vec::new(),
             source_unit_part_callbacks: Vec::new(),
             contract_callbacks: Vec::new(),
+            contract_part_callbacks: Vec::new(),
             function_callbacks: Vec::new(),
             variable_callbacks: Vec::new(),
             expression_callbacks: Vec::new(),
@@ -45,6 +47,13 @@ impl ASTVisitor {
         F: Fn(&ContractDefinition, &SolidityFile) + Send + Sync + 'static,
     {
         self.contract_callbacks.push(Box::new(callback));
+    }
+
+    pub fn on_contract_part<F>(&mut self, callback: F)
+    where
+        F: Fn(&ContractPart, &SolidityFile) + Send + Sync + 'static,
+    {
+        self.contract_part_callbacks.push(Box::new(callback));
     }
 
     pub fn on_function<F>(&mut self, callback: F)
@@ -114,6 +123,9 @@ impl ASTVisitor {
         }
 
         for part in &contract.parts {
+            for callback in &self.contract_part_callbacks {
+                callback(part, file);
+            }
             match part {
                 solang_parser::pt::ContractPart::FunctionDefinition(function) => {
                     self.visit_function(function, file);
