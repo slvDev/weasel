@@ -10,6 +10,7 @@ pub mod default_visibility;
 pub mod magic_numbers;
 pub mod prefer_concat;
 pub mod prefer_require;
+pub mod renounce_ownership;
 pub mod two_step_critical_changes;
 pub mod while_true_loop;
 
@@ -22,5 +23,6 @@ pub use default_visibility::DefaultVisibilityDetector;
 pub use magic_numbers::MagicNumberDetector;
 pub use prefer_concat::PreferConcatDetector;
 pub use prefer_require::PreferRequireDetector;
+pub use renounce_ownership::RenounceOwnershipDetector;
 pub use two_step_critical_changes::TwoStepCriticalChangesDetector;
 pub use while_true_loop::WhileTrueLoopDetector;

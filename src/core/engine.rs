@@ -67,6 +67,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::nc::ConsoleLogImportDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::nc::RenounceOwnershipDetector::default(),
+        ));
 
         // Gas optimization detectors
         // not implemented
