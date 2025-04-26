@@ -70,6 +70,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::nc::RenounceOwnershipDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::nc::DraftDependencyDetector::default(),
+        ));
 
         // Gas optimization detectors
         // not implemented
