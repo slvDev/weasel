@@ -83,6 +83,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::nc::EventMissingIndexedArgsDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::nc::FunctionLengthDetector::default(),
+        ));
 
         // Gas optimization detectors
         // not implemented
