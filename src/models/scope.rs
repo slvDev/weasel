@@ -38,16 +38,26 @@ pub struct SolidityFile {
 
     #[serde(skip)]
     pub source_unit: Option<SourceUnit>,
+    #[serde(skip)]
+    pub line_starts: Vec<usize>,
 }
 
 impl SolidityFile {
     pub fn new(path: PathBuf, content: String) -> Self {
+        let mut line_starts = vec![0]; // Line 1 starts at offset 0
+        for (i, byte) in content.bytes().enumerate() {
+            if byte == b'\n' {
+                line_starts.push(i + 1);
+            }
+        }
+
         Self {
             path,
             content,
             source_unit: None,
             solidity_version: None,
             contract_definitions: Vec::new(),
+            line_starts,
         }
     }
 
