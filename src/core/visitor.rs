@@ -104,6 +104,14 @@ impl ASTVisitor {
                 SourceUnitPart::VariableDefinition(variable) => {
                     self.visit_variable(variable, file);
                 }
+                SourceUnitPart::TypeDefinition(type_definition) => {
+                    self.visit_expression(&type_definition.ty, file);
+                }
+                SourceUnitPart::StructDefinition(struct_definition) => {
+                    for field in &struct_definition.fields {
+                        self.visit_expression(&field.ty, file);
+                    }
+                }
                 _ => {}
             }
         }
@@ -127,11 +135,19 @@ impl ASTVisitor {
                 callback(part, file);
             }
             match part {
-                solang_parser::pt::ContractPart::FunctionDefinition(function) => {
+                ContractPart::FunctionDefinition(function) => {
                     self.visit_function(function, file);
                 }
-                solang_parser::pt::ContractPart::VariableDefinition(variable) => {
+                ContractPart::VariableDefinition(variable) => {
                     self.visit_variable(variable, file);
+                }
+                ContractPart::TypeDefinition(type_definition) => {
+                    self.visit_expression(&type_definition.ty, file);
+                }
+                ContractPart::StructDefinition(struct_definition) => {
+                    for field in &struct_definition.fields {
+                        self.visit_expression(&field.ty, file);
+                    }
                 }
                 _ => {}
             }
@@ -144,13 +160,13 @@ impl ASTVisitor {
         }
         for (_, param_opt) in &function.params {
             if let Some(param) = param_opt {
-                // Just visit the parameter itself
+                self.visit_expression(&param.ty, file);
             }
         }
 
         for (_, param_opt) in &function.returns {
             if let Some(param) = param_opt {
-                // Just visit the parameter itself
+                self.visit_expression(&param.ty, file);
             }
         }
 
@@ -430,6 +446,7 @@ impl ASTVisitor {
                 self.visit_expression(expr, file);
             }
             Statement::VariableDefinition(_, variable_decl, init_expr_opt) => {
+                self.visit_expression(&variable_decl.ty, file);
                 if let Some(init_expr) = init_expr_opt {
                     self.visit_expression(init_expr, file);
                 }
