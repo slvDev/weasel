@@ -76,6 +76,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::nc::DuplicateRequireRevertDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::nc::RedundantElseDetector::default(),
+        ));
 
         // Gas optimization detectors
         // not implemented
