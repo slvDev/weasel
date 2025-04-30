@@ -28,6 +28,25 @@ pub fn offset_to_line_col(content: &str, offset: usize) -> (usize, usize) {
     (line_count, column)
 }
 
+/// Optimized helper to calculate 1-based line and 0-based column using precomputed line starts.
+pub fn offset_to_line_col_cached(offset: usize, line_starts: &[usize]) -> (usize, usize) {
+    let line_index = line_starts.partition_point(|&start| start <= offset);
+
+    let current_line_index = if line_index > 0 && line_starts[line_index - 1] == offset {
+        line_index - 1 // Offset is exactly start of this line, belongs to previous line conceptually for line number
+    } else if line_index == 0 {
+        0 // Offset is on the first line
+    } else {
+        line_index - 1 // Belongs to the line that starts at line_starts[line_index - 1]
+    };
+
+    let line_number = current_line_index + 1;
+    let line_start_offset = line_starts[current_line_index];
+    let column = offset.saturating_sub(line_start_offset);
+
+    (line_number, column)
+}
+
 /// Helper to create a Location object from solang Loc and file context
 pub fn loc_to_location(loc: &Loc, file: &SolidityFile) -> Location {
     let (start_offset, end_offset) = match loc {
