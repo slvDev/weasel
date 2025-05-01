@@ -33,7 +33,7 @@ pub fn loc_to_location(loc: &Loc, file: &SolidityFile) -> Location {
         Loc::File(_, start, end) => {
             let (start_line, start_col) = offset_to_line_col(*start, &file.line_starts);
             let (end_line, end_col) = offset_to_line_col(*end, &file.line_starts);
-            let snippet = file.content.get(*start..=*end).unwrap_or("").to_string();
+            let snippet = file.content.get(*start..*end).unwrap_or("").to_string();
 
             Location {
                 file: file.path.to_string_lossy().to_string(),

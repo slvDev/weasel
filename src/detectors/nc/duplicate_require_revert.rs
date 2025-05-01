@@ -190,7 +190,7 @@ mod tests {
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .contains("require(msg.sender == owner, \"Not owner\");"),
+                .contains("require(msg.sender == owner, \"Not owner\")"),
             "Snippet for first assert is incorrect"
         );
     }

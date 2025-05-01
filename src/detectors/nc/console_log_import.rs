@@ -94,7 +94,7 @@ mod tests {
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .eq("import \"hardhat/console.sol\";"),
+                .eq("import \"hardhat/console.sol\""),
             "Snippet for arr[0] is incorrect"
         );
 
@@ -103,7 +103,7 @@ mod tests {
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .eq("import { console2 as console } from \"forge-std/console2.sol\";"),
+                .eq("import { console2 as console } from \"forge-std/console2.sol\""),
             "Snippet for arr[0] is incorrect"
         );
     }

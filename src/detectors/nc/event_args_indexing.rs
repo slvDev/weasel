@@ -100,7 +100,7 @@ mod tests {
     use std::sync::Arc;
 
     #[test]
-    fn test_event_indexing_convention_detector() {
+    fn test_event_indexing_detector() {
         let code = r#"
             pragma solidity ^0.8.0;
 
@@ -148,7 +148,7 @@ mod tests {
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .contains("event Event1_0(uint a);"),
+                .contains("event Event1_0(uint a)"),
             "Snippet for first assert is incorrect"
         );
     }
