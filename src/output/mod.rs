@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::{self, Write};
-use std::path::Path;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -42,12 +42,13 @@ impl fmt::Display for ReportFormat {
 pub fn generate_report(
     report: &Report,
     format: &ReportFormat,
-    output_path: Option<&Path>,
+    output: Option<PathBuf>,
 ) -> io::Result<()> {
     match format {
         ReportFormat::Json => {
-            if let Some(path) = output_path {
-                let file = File::create(path)?;
+            if let Some(path) = output {
+                let path_with_extension = path.with_extension("json");
+                let file = File::create(path_with_extension)?;
                 serde_json::to_writer_pretty(file, report)?;
             } else {
                 let stdout = io::stdout();
@@ -58,8 +59,9 @@ pub fn generate_report(
         ReportFormat::Markdown => {
             let markdown = generate_markdown_report(report);
 
-            if let Some(path) = output_path {
-                let mut file = File::create(path)?;
+            if let Some(path) = output {
+                let path_with_extension = path.with_extension("md");
+                let mut file = File::create(path_with_extension)?;
                 write!(file, "{}", markdown)?;
             } else {
                 println!("{}", markdown);
