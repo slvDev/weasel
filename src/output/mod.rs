@@ -3,21 +3,38 @@
 
 use crate::models::finding::Location;
 use crate::models::Report;
+use serde::Deserialize;
 use std::collections::HashMap;
+use std::fmt;
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::Path;
+use std::str::FromStr;
+
+#[derive(Debug, Clone, Deserialize, Default)]
 pub enum ReportFormat {
     Json,
+    #[default]
     Markdown,
 }
 
-impl ReportFormat {
-    pub fn from_str(s: &str) -> Option<Self> {
+impl FromStr for ReportFormat {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "json" => Some(ReportFormat::Json),
-            "md" | "markdown" => Some(ReportFormat::Markdown),
-            _ => None,
+            "json" => Ok(ReportFormat::Json),
+            "md" | "markdown" => Ok(ReportFormat::Markdown),
+            _ => Err(format!("Invalid report format: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for ReportFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReportFormat::Json => write!(f, "Json"),
+            ReportFormat::Markdown => write!(f, "Markdown"),
         }
     }
 }

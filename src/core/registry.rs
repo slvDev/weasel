@@ -44,11 +44,9 @@ impl DetectorRegistry {
     }
 
     pub fn get_all(&self) -> Vec<Arc<dyn Detector>> {
-        println!("Getting all detectors");
         self.detectors.iter().cloned().collect()
     }
 
-    /// Get the number of rgistered detectors
     pub fn count(&self) -> usize {
         self.detectors.len()
     }

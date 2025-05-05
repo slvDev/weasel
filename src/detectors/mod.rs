@@ -1,6 +1,7 @@
 use crate::core::visitor::ASTVisitor;
 use crate::models::finding::Location;
 use crate::models::Severity;
+use std::fmt;
 use std::sync::{Arc, Mutex};
 
 pub mod nc;
@@ -40,4 +41,25 @@ pub trait Detector: Send + Sync + 'static {
 
     /// Register callbacks with the AST visitor.
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor);
+}
+
+impl fmt::Display for dyn Detector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut msg = format!(
+            "Name: {}\nSeverity: {}\nDescription: {}",
+            self.name(),
+            self.severity(),
+            self.description()
+        );
+
+        if let Some(gas_savings) = self.gas_savings() {
+            msg += &format!("\nGas Savings: {}", gas_savings);
+        }
+
+        if let Some(example) = self.example() {
+            msg += &format!("\nExample: {}", example);
+        }
+
+        write!(f, "{}", msg)
+    }
 }
