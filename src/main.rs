@@ -1,50 +1,49 @@
-// Weasel - Smart Contract Static Analysis Tool
-// Entry point for the CLI application
-
+mod config;
 mod core;
 mod detectors;
 mod models;
 mod output;
 mod utils;
 
+use crate::config::{initialize_config_file, load_config, Config};
 use crate::core::engine::AnalysisEngine;
-use crate::output::ReportFormat;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-/// Smart Contract Static Analysis Tool
 #[derive(Parser)]
 #[command(name = "weasel")]
 #[command(about = "Smart Contract Static Analysis Tool for Solidity")]
 #[command(version = core::version())]
 struct Cli {
-    /// Subcommand to execute
     #[command(subcommand)]
     command: Commands,
 }
 
-/// Available commands
 #[derive(Subcommand)]
 enum Commands {
-    /// Analyze smart contracts for vulnerabilities
+    Init,
     Analyze {
-        /// Directory or file paths to analyze
-        #[arg(required = true)]
-        paths: Vec<PathBuf>,
+        #[arg(short, long)]
+        scope: Option<Vec<PathBuf>>,
 
-        /// Path to output report file
-        #[arg(short, long, value_name = "FILE")]
+        #[arg(short, long)]
+        min_severity: Option<String>,
+
+        #[arg(short, long)]
+        format: Option<String>,
+
+        #[arg(short, long, value_name = "REPORT_FILE_NAME")]
         output: Option<PathBuf>,
 
-        /// Report format (json, md)
-        #[arg(short, long, default_value = "json")]
-        format: String,
+        #[arg(short, long, value_name = "PATH_TO_CONFIG")]
+        config: Option<PathBuf>,
     },
-    /// List available detectors
     Detectors {
-        /// Filter by severity level
         #[arg(short, long)]
         severity: Option<String>,
+
+        #[arg(short, long)]
+        details: Option<String>,
     },
 }
 
@@ -52,51 +51,34 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::Init => match initialize_config_file(None) {
+            Ok(_) => {}
+            Err(e) => {
+                eprintln!("Error during initialization: {}", e);
+                std::process::exit(1);
+            }
+        },
+
         Commands::Analyze {
-            paths,
-            output,
+            scope,
+            min_severity,
             format,
+            output,
+            config,
         } => {
-            println!("Analyzing {:?} paths", paths.len());
-            println!(
-                "Output: {:?}",
-                output
-                    .as_deref()
-                    .unwrap_or_else(|| std::path::Path::new("stdout"))
-            );
-            println!("Format: {}", format);
+            let config = load_config(scope, min_severity, format, config);
 
-            // Create the analysis engine
-            let mut engine = AnalysisEngine::new();
-
-            // Register built-in detectors
+            let mut engine = AnalysisEngine::new(&config);
             engine.register_built_in_detectors();
 
-            // Run the analysis
-            match engine.analyze(paths) {
+            match engine.analyze() {
                 Ok(mut report) => {
-                    // Add a comment about the analysis
                     report = report.with_comment(
                         "This analysis was performed with the Weasel Static Analysis Tool.",
                     );
-
-                    // Add a footnote
                     report = report.with_footnote("Note: This tool is in development. For questions or feedback, please contact the Weasel team.");
 
-                    // Generate the report
-                    let report_format = match format.as_str() {
-                        "json" => ReportFormat::Json,
-                        "md" | "markdown" => ReportFormat::Markdown,
-                        _ => {
-                            eprintln!("Unsupported format: {}. Using JSON instead.", format);
-                            ReportFormat::Json
-                        }
-                    };
-
-                    // Output the report
-                    if let Err(e) =
-                        output::generate_report(&report, &report_format, output.as_deref())
-                    {
+                    if let Err(e) = output::generate_report(&report, &config.format, output) {
                         eprintln!("Error generating report: {}", e);
                         std::process::exit(1);
                     }
@@ -107,42 +89,50 @@ fn main() {
                 }
             }
         }
-        Commands::Detectors { severity } => {
-            let mut engine = AnalysisEngine::new();
+
+        Commands::Detectors { severity, details } => {
+            let config = Config::default();
+            let mut engine = AnalysisEngine::new(&config);
             engine.register_built_in_detectors();
             let registry = engine.registry();
 
-            let detectors = if let Some(sev_str) = &severity {
-                // Convert string to Severity enum
-                let sev = match sev_str.to_lowercase().as_str() {
-                    "high" => Some(crate::models::Severity::High),
-                    "medium" => Some(crate::models::Severity::Medium),
-                    "low" => Some(crate::models::Severity::Low),
-                    "gas" => Some(crate::models::Severity::Gas),
-                    "nc" => Some(crate::models::Severity::NC),
-                    _ => None,
-                };
-
-                if let Some(s) = sev {
-                    println!("Detectors filtered by severity: {}", s);
-                    registry.get_by_severity(&s)
+            if let Some(detector_id) = details {
+                if let Some(detector) = registry.get(&detector_id) {
+                    println!("{}", detector);
                 } else {
-                    println!("Invalid severity: {}.", sev_str);
-                    println!("Acceptable severities are: high, medium, low, gas, nc");
-                    Vec::new()
+                    eprintln!("Error: Detector with ID '{}' not found.", detector_id);
+                }
+                return;
+            }
+
+            let detectors = if let Some(sev_str) = &severity {
+                match sev_str.parse() {
+                    Ok(sev) => {
+                        println!("\nAvailable detectors filtered by severity: {}", sev);
+                        registry.get_by_severity(&sev)
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        eprintln!("Acceptable values: high, medium, low, gas, nc");
+                        std::process::exit(1);
+                    }
                 }
             } else {
-                println!("\nAvailable detectors:");
+                println!("\nAvailable detectors (Total: {}):", registry.count());
                 registry.get_all()
             };
 
-            for detector in detectors {
-                println!(
-                    "- {}: {} ({})",
-                    detector.id(),
-                    detector.name(),
-                    detector.severity()
-                );
+            if detectors.is_empty() {
+                println!("No detectors found");
+            } else {
+                for detector in detectors {
+                    println!(
+                        "({}) - {}: {}",
+                        detector.severity(),
+                        detector.id(),
+                        detector.name(),
+                    );
+                }
             }
         }
     }
