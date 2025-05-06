@@ -3,8 +3,7 @@ use crate::core::engine::AnalysisEngine;
 use crate::output;
 use std::path::PathBuf;
 
-// Define a placeholder for a potential custom error type later
-pub fn handle_analyze_command(
+pub fn handle_run_command(
     scope: Option<Vec<PathBuf>>,
     min_severity: Option<String>,
     format: Option<String>,

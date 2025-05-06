@@ -21,7 +21,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Init,
-    Analyze {
+    Run {
         #[arg(short, long)]
         scope: Option<Vec<PathBuf>>,
 
@@ -53,14 +53,14 @@ fn main() {
         Commands::Init => {
             cli::init::handle_init_command();
         }
-        Commands::Analyze {
+        Commands::Run {
             scope,
             min_severity,
             format,
             output,
             config,
         } => {
-            cli::analyze::handle_analyze_command(scope, min_severity, format, output, config);
+            cli::run::handle_run_command(scope, min_severity, format, output, config);
         }
         Commands::Detectors { severity, details } => {
             cli::detectors::handle_detectors_command(severity, details);
