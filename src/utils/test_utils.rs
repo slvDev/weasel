@@ -7,7 +7,7 @@ use solang_parser::parse;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-pub fn parse_and_prepare(code: &str, filename: &str) -> SolidityFile {
+fn parse_and_prepare(code: &str, filename: &str) -> SolidityFile {
     let parse_result = parse(code, 0);
     assert!(
         parse_result.is_ok(),

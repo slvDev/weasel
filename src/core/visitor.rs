@@ -28,6 +28,7 @@ impl ASTVisitor {
         }
     }
 
+    #[allow(dead_code)] // Dont use this for now.
     pub fn on_source_unit<F>(&mut self, callback: F)
     where
         F: Fn(&SourceUnit, &SolidityFile) + Send + Sync + 'static,

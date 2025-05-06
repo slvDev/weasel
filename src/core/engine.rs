@@ -139,12 +139,4 @@ impl AnalysisEngine {
     pub fn registry(&self) -> &DetectorRegistry {
         &self.registry
     }
-
-    pub fn visitor_mut(&mut self) -> &mut ASTVisitor {
-        &mut self.visitor
-    }
-
-    pub fn visitor(&self) -> &ASTVisitor {
-        &self.visitor
-    }
 }
