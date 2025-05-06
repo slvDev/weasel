@@ -1,6 +1,3 @@
-// detectors/nc/mod.rs
-// Exports NC (Non-Critical) detectors
-
 pub mod abi_encode_call;
 pub mod abicoder_v2;
 pub mod array_indices;

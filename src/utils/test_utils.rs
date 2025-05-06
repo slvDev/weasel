@@ -37,12 +37,9 @@ pub fn run_detector_on_code(
     let files = vec![file]; // ASTVisitor expects a slice or Vec
 
     let mut visitor = ASTVisitor::new();
-    // Clone the Arc for registration, as register_callbacks takes ownership of the Arc
-    // The original Arc `detector` is used later to retrieve locations.
     detector.clone().register_callbacks(&mut visitor);
 
     visitor.traverse(&files);
 
-    // Retrieve locations from the original detector Arc
     detector.locations()
 }

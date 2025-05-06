@@ -1,6 +1,3 @@
-// src/core/context.rs
-// Manages the analysis scope, file loading, and provides context for detectors.
-
 use crate::models::{ContractDefinitionInfo, ScopeFiles, SolidityFile};
 use solang_parser::{
     parse,

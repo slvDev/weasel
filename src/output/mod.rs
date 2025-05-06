@@ -1,6 +1,3 @@
-// output/mod.rs
-// Exports output formatting modules
-
 use crate::models::finding::Location;
 use crate::models::Report;
 use serde::Deserialize;

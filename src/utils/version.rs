@@ -1,4 +1,3 @@
-// src/utils/version.rs
 use semver::{Version, VersionReq};
 
 /// "^0.8.0" -> "^0.8.0"

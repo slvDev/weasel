@@ -1,6 +1,3 @@
-// src/utils/location.rs
-// Utility functions for handling solang_parser::pt::Loc
-
 use crate::models::finding::Location;
 use crate::models::scope::SolidityFile;
 use solang_parser::pt::Loc;
