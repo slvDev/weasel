@@ -20,16 +20,3 @@ pub struct Finding {
     pub example: Option<String>,
     pub locations: Vec<Location>,
 }
-
-impl Finding {
-    pub fn new(severity: Severity, title: &str, description: &str) -> Self {
-        Self {
-            severity,
-            title: title.to_string(),
-            description: description.to_string(),
-            gas_savings: None,
-            example: None,
-            locations: Vec::new(),
-        }
-    }
-}
