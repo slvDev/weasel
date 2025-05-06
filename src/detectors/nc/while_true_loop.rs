@@ -3,7 +3,10 @@ use crate::detectors::Detector;
 use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
-use solang_parser::pt::{Expression, Statement};
+use solang_parser::{
+    helpers::CodeLocation,
+    pt::{Expression, Loc, Statement},
+};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Default)]
@@ -62,9 +65,12 @@ function processQueueWithFor() external {
         let detector_arc = self.clone();
 
         visitor.on_statement(move |stmt, file| {
-            if let Statement::While(loc, condition, _body) = stmt {
+            if let Statement::While(loc, condition, body) = stmt {
                 if let Expression::BoolLiteral(_, true) = condition {
-                    detector_arc.add_location(loc_to_location(loc, file));
+                    let issue_loc = Loc::default()
+                        .with_start(loc.start())
+                        .with_end(body.loc().start());
+                    detector_arc.add_location(loc_to_location(&issue_loc, file));
                 }
             }
         });
@@ -105,6 +111,15 @@ mod tests {
         assert_eq!(locations.len(), 2, "Should detect 2 while(true) loops");
         assert_eq!(locations[0].line, 5);
         assert_eq!(locations[1].line, 16);
+
+        assert!(
+            locations[0]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .eq("while (true)"),
+            "Snippet for first assert is incorrect"
+        );
 
         let code_negative = r#"
             pragma solidity ^0.8.10;

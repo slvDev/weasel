@@ -3,7 +3,7 @@ use crate::detectors::Detector;
 use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::{loc_to_location, offset_to_line_col};
-use solang_parser::pt::{FunctionTy, Statement};
+use solang_parser::pt::{FunctionTy, Loc, Statement};
 use std::sync::{Arc, Mutex};
 
 const MAX_FUNCTION_LINES: usize = 30;
@@ -61,8 +61,12 @@ impl Detector for FunctionLengthDetector {
 
                 let line_count = end_line.saturating_sub(start_line);
 
+                let issue_loc = Loc::default()
+                    .with_start(func_def.loc.start())
+                    .with_end(loc.start());
+
                 if line_count > MAX_FUNCTION_LINES {
-                    detector_arc.add_location(loc_to_location(&func_def.loc, file));
+                    detector_arc.add_location(loc_to_location(&issue_loc, file));
                 }
             }
         });
@@ -126,15 +130,19 @@ mod tests {
             2,
             "Should detect longFunction and fileLevelLong"
         );
-        let loc1_snippet = locations[0].snippet.as_deref().unwrap_or("");
-        let loc2_snippet = locations[1].snippet.as_deref().unwrap_or("");
-        assert!(
-            loc1_snippet.contains("longFunction"),
-            "Did not find longFunction"
+
+        println!(
+            "\nlocations[0].snippet: {}\n",
+            locations[0].snippet.as_deref().unwrap_or("")
         );
+
         assert!(
-            loc2_snippet.contains("fileLevelLong"),
-            "Did not find fileLevelLong"
+            locations[0]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .eq("function longFunction() public pure"),
+            "Did not find longFunction"
         );
     }
 }

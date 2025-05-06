@@ -107,6 +107,15 @@ mod tests {
         assert_eq!(locations.len(), 1, "Should detect in >=0.8.4");
         assert_eq!(locations[0].line, 7);
 
+        assert!(
+            locations[0]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .eq("abi.encodePacked(b1, b2)"),
+            "Snippet for first assert is incorrect"
+        );
+
         let code = r#"
             pragma solidity ^0.8.12;
             contract Contract {
@@ -121,6 +130,15 @@ mod tests {
         let locations = run_detector_on_code(detector, code, "test.sol");
         assert_eq!(locations.len(), 1, "Should detect in >=0.8.12");
         assert_eq!(locations[0].line, 7);
+
+        assert!(
+            locations[0]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .eq("abi.encodePacked(s1, s2)"),
+            "Snippet for first assert is incorrect"
+        );
 
         let code = r#"
             pragma solidity ^0.7.0;

@@ -6,7 +6,6 @@ use crate::utils::location::loc_to_location;
 use solang_parser::pt::{Expression, Type};
 use std::sync::{Arc, Mutex};
 
-/// Detector to flag implicit `int` and `uint` types, suggesting explicit `int256`/`uint256`.
 #[derive(Debug, Default)]
 pub struct ExplicitNumTypesDetector {
     locations: Arc<Mutex<Vec<Location>>>,

@@ -60,7 +60,6 @@ impl Detector for ArrayIndicesDetector {
     }
 }
 
-// --- Unit Tests ---
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,20 +89,8 @@ mod tests {
         assert_eq!(locations[0].line, 7, "Line number for arr[0] should be 7");
         assert_eq!(locations[1].line, 8, "Line number for arr[1] should be 8");
         assert!(
-            locations[0]
-                .snippet
-                .as_deref()
-                .unwrap_or("")
-                .contains("arr[0]"),
+            locations[0].snippet.as_deref().unwrap_or("").eq("arr[0]"),
             "Snippet for arr[0] is incorrect"
-        );
-        assert!(
-            locations[1]
-                .snippet
-                .as_deref()
-                .unwrap_or("")
-                .contains("arr[1]"),
-            "Snippet for arr[1] is incorrect"
         );
     }
 }

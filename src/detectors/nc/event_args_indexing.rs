@@ -148,7 +148,7 @@ mod tests {
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .contains("event Event1_0(uint a)"),
+                .eq("event Event1_0(uint a)"),
             "Snippet for first assert is incorrect"
         );
     }

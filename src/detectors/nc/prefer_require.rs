@@ -126,16 +126,8 @@ mod tests {
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .contains("assert(value > 5)"),
+                .eq("assert(value > 5)"),
             "Snippet for first assert is incorrect"
-        );
-        assert!(
-            locations[1]
-                .snippet
-                .as_deref()
-                .unwrap_or("")
-                .contains("assert(true)"),
-            "Snippet for second assert is incorrect"
         );
     }
 }

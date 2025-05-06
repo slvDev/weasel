@@ -114,6 +114,15 @@ mod tests {
         assert_eq!(locations[2].line, 8); // SomeString
         assert_eq!(locations[3].line, 10); // overrideValue
 
+        assert!(
+            locations[0]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .eq("uint constant my_constant = 10"),
+            "Snippet for first assert is incorrect"
+        );
+
         let code = r#"
             pragma solidity ^0.8.0;
 

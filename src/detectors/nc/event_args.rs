@@ -106,7 +106,7 @@ mod tests {
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .contains("event FileLevelEvent()"),
+                .eq("event FileLevelEvent()"),
             "Snippet for first event is incorrect"
         );
     }

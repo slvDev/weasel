@@ -122,7 +122,6 @@ mod tests {
         "#;
         let detector = Arc::new(RenounceOwnershipDetector::default());
         let locations = run_detector_on_code(detector, code_positive, "positive.sol");
-        println!("locations: {:#?}", locations);
         assert_eq!(
             locations.len(),
             2,
@@ -130,19 +129,20 @@ mod tests {
         );
         assert_eq!(locations[0].line, 6);
         assert_eq!(locations[1].line, 11);
+
         assert!(
             locations[0]
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .contains("contract VulnerableContract is IVulnerableContract, Ownable"),
+                .eq("contract VulnerableContract is IVulnerableContract, Ownable"),
             "Snippet for first assert is incorrect"
         );
         assert!(locations[1]
             .snippet
             .as_deref()
             .unwrap_or("")
-            .contains("contract VulnerableContract2 is Ownable2Step"),);
+            .eq("contract VulnerableContract2 is Ownable2Step"),);
 
         let code_negative = r#"
             pragma solidity ^0.8.10;

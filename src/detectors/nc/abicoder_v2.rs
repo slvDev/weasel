@@ -88,7 +88,7 @@ mod tests {
             .snippet
             .as_deref()
             .unwrap_or("")
-            .contains("pragma abicoder v2"));
+            .eq("pragma abicoder v2"));
 
         let code = r#"
             pragma solidity ^0.7.0;

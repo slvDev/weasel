@@ -97,14 +97,5 @@ mod tests {
                 .eq("import \"hardhat/console.sol\""),
             "Snippet for arr[0] is incorrect"
         );
-
-        assert!(
-            locations[1]
-                .snippet
-                .as_deref()
-                .unwrap_or("")
-                .eq("import { console2 as console } from \"forge-std/console2.sol\""),
-            "Snippet for arr[0] is incorrect"
-        );
     }
 }

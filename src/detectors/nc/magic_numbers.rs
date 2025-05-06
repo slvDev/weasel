@@ -142,6 +142,15 @@ mod tests {
         assert_eq!(locations[1].line, 13); // otherFunc(..., 1)
         assert_eq!(locations[2].line, 21); // emit SomeEvent(42)
 
+        assert!(
+            locations[0]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .eq("otherFunc(0x0A, 1)"),
+            "Snippet for first assert is incorrect"
+        );
+
         let code_no_violations = r#"
             pragma solidity ^0.8.10;
 

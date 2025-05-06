@@ -3,7 +3,10 @@ use crate::detectors::Detector;
 use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
-use solang_parser::pt::{Expression, Type};
+use solang_parser::{
+    helpers::OptionalCodeLocation,
+    pt::{Expression, Loc, Type},
+};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Default)]
@@ -101,7 +104,11 @@ function acceptOwner() external {
                 }
 
                 if found_critical_param {
-                    detector_arc.add_location(loc_to_location(&func_def.loc, file));
+                    let body_loc = func_def.body.loc_opt().unwrap_or(func_def.loc);
+                    let issue_loc = Loc::default()
+                        .with_start(func_def.loc.start())
+                        .with_end(body_loc.start());
+                    detector_arc.add_location(loc_to_location(&issue_loc, file));
                 }
             }
         });
@@ -143,6 +150,15 @@ mod tests {
         assert_eq!(locations[2].line, 9); // updateGuardian
         assert_eq!(locations[3].line, 10); // transferOwnership
         assert_eq!(locations[4].line, 13); // setAdminRole
+
+        assert!(
+            locations[0]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .eq("function setOwner(address _newOwner) public"),
+            "Snippet for first assert is incorrect"
+        );
 
         let code_negative = r#"
             pragma solidity ^0.8.10;

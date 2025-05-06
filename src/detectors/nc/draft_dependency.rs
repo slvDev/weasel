@@ -85,7 +85,7 @@ mod tests {
         assert_eq!(locations[0].line, 4); // draft-ERC20Permit.sol
         assert_eq!(locations[1].line, 5); // draftUtils.sol
         assert!(
-            locations[0].snippet.as_deref().unwrap_or("").contains(
+            locations[0].snippet.as_deref().unwrap_or("").eq(
                 "import \"@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol\""
             ),
             "Snippet for first assert is incorrect"

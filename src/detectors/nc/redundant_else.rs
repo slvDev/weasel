@@ -160,7 +160,7 @@ mod tests {
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .contains("return true"),
+                .eq("return true"),
             "Snippet for first assert is incorrect"
         );
     }

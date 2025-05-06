@@ -162,13 +162,21 @@ mod tests {
 
         let detector = Arc::new(DefaultVisibilityDetector::default());
         let locations = run_detector_on_code(detector, code, "default_vis.sol");
-        println!("locations: {:#?}", locations);
 
         assert_eq!(locations.len(), 4, "Should detect 4 default visibilities");
         assert_eq!(locations[0].line, 4); // fileVar
         assert_eq!(locations[1].line, 8); // stateVar
         assert_eq!(locations[2].line, 15); // getValue function
         assert_eq!(locations[3].line, 29); // fileLevelFunc
+
+        assert!(
+            locations[0]
+                .snippet
+                .as_deref()
+                .unwrap_or("")
+                .eq("uint fileVar"),
+            "Snippet for first assert is incorrect"
+        );
 
         let code_no_violations = r#"
             pragma solidity ^0.8.10;

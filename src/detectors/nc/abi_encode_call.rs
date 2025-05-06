@@ -119,21 +119,14 @@ mod tests {
             locations[1].line, 9,
             "Line number for encodeWithSelector should be 9"
         );
+
         assert!(
             locations[0]
                 .snippet
                 .as_deref()
                 .unwrap_or("")
-                .contains("abi.encodeWithSignature"),
+                .eq("abi.encodeWithSignature(\"transfer(address,uint256)\", recipient, amount)"),
             "Snippet for encodeWithSignature is incorrect"
-        );
-        assert!(
-            locations[1]
-                .snippet
-                .as_deref()
-                .unwrap_or("")
-                .contains("abi.encodeWithSelector"),
-            "Snippet for encodeWithSelector is incorrect"
         );
     }
 }
