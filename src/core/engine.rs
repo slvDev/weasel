@@ -34,6 +34,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::high::ComparisonWithoutEffectDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::high::DelegatecallInLoopDetector::default(),
+        ));
 
         // Medium severity detectors
         // not implemented
