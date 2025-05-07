@@ -37,6 +37,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::high::DelegatecallInLoopDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::high::CurveSpotPriceOracleDetector::default(),
+        ));
 
         // Medium severity detectors
         // not implemented
