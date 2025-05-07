@@ -31,7 +31,9 @@ impl AnalysisEngine {
 
     pub fn register_built_in_detectors(&mut self) {
         // High severity detectors
-        // not implemented
+        self.register_detector(Arc::new(
+            crate::detectors::high::ComparisonWithoutEffectDetector::default(),
+        ));
 
         // Medium severity detectors
         // not implemented

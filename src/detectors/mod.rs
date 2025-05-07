@@ -4,6 +4,7 @@ use crate::models::Severity;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
+pub mod high;
 pub mod nc;
 
 pub trait Detector: Send + Sync + 'static {
