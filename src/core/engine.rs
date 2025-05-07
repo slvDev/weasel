@@ -43,6 +43,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::high::MsgValueInLoopDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::high::WstethStethPerTokenUsageDetector::default(),
+        ));
 
         // Medium severity detectors
         // not implemented
