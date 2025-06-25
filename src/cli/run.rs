@@ -5,12 +5,13 @@ use std::path::PathBuf;
 
 pub fn handle_run_command(
     scope: Option<Vec<PathBuf>>,
+    exclude: Option<Vec<PathBuf>>,
     min_severity: Option<String>,
     format: Option<String>,
     output: Option<PathBuf>,
     config_path: Option<PathBuf>,
 ) {
-    let config = load_config(scope, min_severity, format, config_path);
+    let config = load_config(scope, exclude, min_severity, format, config_path);
 
     let mut engine = AnalysisEngine::new(&config);
     engine.register_built_in_detectors();

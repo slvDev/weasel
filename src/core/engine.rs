@@ -115,7 +115,8 @@ impl AnalysisEngine {
     }
 
     pub fn analyze(&mut self) -> Result<Report, String> {
-        self.context.load_files(&self.config.scope)?;
+        self.context
+            .load_files(&self.config.scope, &self.config.exclude)?;
         println!("Loaded {} Solidity files", self.context.files.len());
 
         let mut report = Report::new();

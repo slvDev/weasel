@@ -11,6 +11,11 @@ pub const DEFAULT_CONFIG_CONTENT: &str = r#"# weasel.toml
 # If omitted, it defaults to ["src"]
 # scope = ["src"]
 
+# Paths to exclude from the analysis.
+# These can be directories (including subdirectories) or specific files.
+# If omitted, it defaults to [] (no exclusions)
+# exclude = ["lib", "test"]
+
 # Minimum severity level of detectors to *run* during analysis.
 # Only detectors with this severity or higher will be executed.
 # Options: "High", "Medium", "Low", "Gas", "NC" (case-insensitive)
@@ -27,6 +32,8 @@ pub const DEFAULT_CONFIG_CONTENT: &str = r#"# weasel.toml
 pub struct Config {
     #[serde(default = "default_scope")]
     pub scope: Vec<PathBuf>,
+    #[serde(default = "default_exclude")]
+    pub exclude: Vec<PathBuf>,
     #[serde(default)]
     pub min_severity: Severity,
     #[serde(default)]
@@ -37,10 +44,15 @@ fn default_scope() -> Vec<PathBuf> {
     vec![PathBuf::from("src")]
 }
 
+fn default_exclude() -> Vec<PathBuf> {
+    vec![PathBuf::from("lib"), PathBuf::from("test")]
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
             scope: default_scope(),
+            exclude: default_exclude(),
             min_severity: Severity::default(),
             format: ReportFormat::default(),
         }
@@ -49,6 +61,7 @@ impl Default for Config {
 
 pub fn load_config(
     scope: Option<Vec<PathBuf>>,
+    exclude: Option<Vec<PathBuf>>,
     min_severity: Option<String>,
     format: Option<String>,
     config_path: Option<PathBuf>,
@@ -85,6 +98,7 @@ pub fn load_config(
 
     Config {
         scope: scope.unwrap_or(config.scope),
+        exclude: exclude.unwrap_or(config.exclude),
         min_severity: min_severity.map_or(config.min_severity, |s| {
             s.parse().unwrap_or_else(|e| {
                 eprintln!("Warning: {}. Using default severity.", e);

@@ -26,6 +26,9 @@ enum Commands {
         scope: Option<Vec<PathBuf>>,
 
         #[arg(short, long)]
+        exclude: Option<Vec<PathBuf>>,
+
+        #[arg(short, long)]
         min_severity: Option<String>,
 
         #[arg(short, long)]
@@ -55,12 +58,13 @@ fn main() {
         }
         Commands::Run {
             scope,
+            exclude,
             min_severity,
             format,
             output,
             config,
         } => {
-            cli::run::handle_run_command(scope, min_severity, format, output, config);
+            cli::run::handle_run_command(scope, exclude, min_severity, format, output, config);
         }
         Commands::Detectors { severity, details } => {
             cli::detectors::handle_detectors_command(severity, details);
