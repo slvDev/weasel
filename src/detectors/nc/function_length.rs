@@ -1,20 +1,18 @@
 use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
+use crate::models::FindingData;
 use crate::utils::location::{loc_to_location, offset_to_line_col};
 use solang_parser::pt::{FunctionTy, Loc, Statement};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 const MAX_FUNCTION_LINES: usize = 30;
 
 #[derive(Debug, Default)]
-pub struct FunctionLengthDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct FunctionLengthDetector;
 
 impl Detector for FunctionLengthDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "function-length"
     }
 
@@ -38,13 +36,7 @@ impl Detector for FunctionLengthDetector {
         None
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
         visitor.on_function(move |func_def, file| {
             if func_def.body.is_none()
                 || matches!(
@@ -52,7 +44,7 @@ impl Detector for FunctionLengthDetector {
                     FunctionTy::Constructor | FunctionTy::Fallback | FunctionTy::Receive
                 )
             {
-                return;
+                return Vec::new();
             }
 
             if let Some(Statement::Block { loc, .. }) = &func_def.body {
@@ -66,9 +58,14 @@ impl Detector for FunctionLengthDetector {
                     .with_end(loc.start());
 
                 if line_count > MAX_FUNCTION_LINES {
-                    detector_arc.add_location(loc_to_location(&issue_loc, file));
+                    return FindingData {
+                        detector_id: self.id(),
+                        location: loc_to_location(&issue_loc, file),
+                    }
+                    .into();
                 }
             }
+            Vec::new()
         });
     }
 }

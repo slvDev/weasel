@@ -1,18 +1,15 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{Import, ImportPath, SourceUnitPart};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct ConsoleLogImportDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct ConsoleLogImportDetector;
 
 impl Detector for ConsoleLogImportDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "console-log-import"
     }
 
@@ -36,13 +33,7 @@ impl Detector for ConsoleLogImportDetector {
         None
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
         visitor.on_source_unit_part(move |part, file| {
             if let SourceUnitPart::ImportDirective(import) = part {
                 let (path_literal, loc) = match import {
@@ -54,10 +45,15 @@ impl Detector for ConsoleLogImportDetector {
                 if let Some(ImportPath::Filename(filepath)) = path_literal {
                     let lower_path = filepath.string.to_lowercase();
                     if lower_path.contains("console.sol") || lower_path.contains("console2.sol") {
-                        detector_arc.add_location(loc_to_location(loc, file));
+                        return FindingData {
+                            detector_id: self.id(),
+                            location: loc_to_location(loc, file),
+                        }
+                        .into();
                     }
                 }
             }
+            Vec::new()
         });
     }
 }

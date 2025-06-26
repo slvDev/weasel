@@ -1,18 +1,15 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::VariableAttribute;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct ConstantCaseDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct ConstantCaseDetector;
 
 impl Detector for ConstantCaseDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "constant-case"
     }
 
@@ -47,13 +44,7 @@ address immutable DEPLOYER_ADDRESS;
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
         visitor.on_variable(move |var_def, file| {
             let is_constant = var_def
                 .attrs
@@ -73,10 +64,15 @@ address immutable DEPLOYER_ADDRESS;
                 if let Some(name_ident) = &var_def.name {
                     let name = &name_ident.name;
                     if name.chars().any(|c| c.is_ascii_lowercase()) {
-                        detector_arc.add_location(loc_to_location(&var_def.loc, file));
+                        return FindingData {
+                            detector_id: self.id(),
+                            location: loc_to_location(&var_def.loc, file),
+                        }
+                        .into();
                     }
                 }
             }
+            Vec::new()
         });
     }
 }

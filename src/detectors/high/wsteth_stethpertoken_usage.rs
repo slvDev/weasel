@@ -1,19 +1,15 @@
-use crate::{
-    core::visitor::ASTVisitor,
-    detectors::Detector,
-    models::{finding::Location, severity::Severity},
-    utils::location::loc_to_location,
-};
+use crate::detectors::Detector;
+use crate::models::severity::Severity;
+use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::Expression;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct WstethStethPerTokenUsageDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct WstethStethPerTokenUsageDetector;
 
 impl Detector for WstethStethPerTokenUsageDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "wsteth-stethpertoken-usage"
     }
 
@@ -61,20 +57,20 @@ contract VulnerableContract {
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
         visitor.on_expression(move |expr, file| {
             if let Expression::FunctionCall(loc, func_expr, _) = expr {
                 if let Expression::MemberAccess(_, _, member_ident) = func_expr.as_ref() {
                     if member_ident.name == "stEthPerToken" {
-                        detector_arc.add_location(loc_to_location(loc, file));
+                        return FindingData {
+                            detector_id: self.id(),
+                            location: loc_to_location(loc, file),
+                        }
+                        .into();
                     }
                 }
             }
+            Vec::new()
         });
     }
 }

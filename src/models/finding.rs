@@ -20,3 +20,14 @@ pub struct Finding {
     pub example: Option<String>,
     pub locations: Vec<Location>,
 }
+
+pub struct FindingData {
+    pub detector_id: &'static str,
+    pub location: Location,
+}
+
+impl From<FindingData> for Vec<FindingData> {
+    fn from(finding: FindingData) -> Self {
+        vec![finding]
+    }
+}

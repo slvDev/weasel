@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::core::context::AnalysisContext;
+use crate::core::processor::{AnalysisResults, Processor};
 use crate::core::registry::DetectorRegistry;
 use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
@@ -10,6 +11,7 @@ pub struct AnalysisEngine {
     context: AnalysisContext,
     registry: DetectorRegistry,
     visitor: ASTVisitor,
+    processor: Processor,
     config: Config,
 }
 
@@ -19,6 +21,7 @@ impl AnalysisEngine {
             context: AnalysisContext::new(),
             registry: DetectorRegistry::new(),
             visitor: ASTVisitor::new(),
+            processor: Processor::new(),
             config: config.clone(),
         }
     }
@@ -97,9 +100,6 @@ impl AnalysisEngine {
             crate::detectors::nc::DraftDependencyDetector::default(),
         ));
         self.register_detector(Arc::new(
-            crate::detectors::nc::DuplicateRequireRevertDetector::default(),
-        ));
-        self.register_detector(Arc::new(
             crate::detectors::nc::RedundantElseDetector::default(),
         ));
         self.register_detector(Arc::new(crate::detectors::nc::EventArgsDetector::default()));
@@ -119,35 +119,43 @@ impl AnalysisEngine {
             .load_files(&self.config.scope, &self.config.exclude)?;
         println!("Loaded {} Solidity files", self.context.files.len());
 
-        let mut report = Report::new();
         let detectors = self.registry.get_all();
         for detector_arc in detectors.clone() {
             detector_arc.register_callbacks(&mut self.visitor);
         }
-        println!("Traversing AST with visitor...");
-        self.visitor.traverse(&self.context.files);
 
-        println!("Collecting findings from detectors...");
-        for detector_arc in detectors {
-            let collected_locations = detector_arc.locations();
-            if !collected_locations.is_empty() {
+        let results = self
+            .processor
+            .process_files(&self.context.files, &self.visitor);
+
+        let report = self.generate_report_from_results(&results);
+
+        Ok(report)
+    }
+
+    fn generate_report_from_results(&self, results: &AnalysisResults) -> Report {
+        let mut report = Report::new();
+
+        for (detector_id, locations) in &results.findings_by_detector {
+            if let Some(detector) = self.registry.get(detector_id) {
                 let finding = Finding {
-                    severity: detector_arc.severity(),
-                    title: detector_arc.name().to_string(),
-                    description: detector_arc.description().to_string(),
-                    gas_savings: detector_arc.gas_savings(),
-                    example: detector_arc.example(),
-                    locations: collected_locations,
+                    severity: detector.severity(),
+                    title: detector.name().to_string(),
+                    description: detector.description().to_string(),
+                    gas_savings: detector.gas_savings(),
+                    example: detector.example(),
+                    locations: locations.clone(),
                 };
                 report.add_finding(finding);
             }
         }
 
+        // Add metadata
         report.add_metadata("version", crate::core::version());
         report.add_metadata("timestamp", &chrono::Utc::now().to_rfc3339());
-        report.add_metadata("files_analyzed", &self.context.files.len().to_string());
+        report.add_metadata("total_findings", &results.total_findings().to_string());
 
-        Ok(report)
+        report
     }
 
     // Getters

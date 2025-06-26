@@ -34,12 +34,11 @@ pub fn run_detector_on_code(
 ) -> Vec<Location> {
     let file = parse_and_prepare(code, filename);
     // println!("File: {:#?}", file);
-    let files = vec![file]; // ASTVisitor expects a slice or Vec
 
     let mut visitor = ASTVisitor::new();
     detector.clone().register_callbacks(&mut visitor);
 
-    visitor.traverse(&files);
+    let findings = visitor.traverse(&file);
 
-    detector.locations()
+    findings.iter().map(|f| f.location.clone()).collect()
 }

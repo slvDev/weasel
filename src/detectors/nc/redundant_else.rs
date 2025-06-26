@@ -1,15 +1,12 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{Loc, Statement};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct RedundantElseDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct RedundantElseDetector;
 
 fn true_branch_unconditionally_exits(stmt: &Statement) -> Option<Loc> {
     match stmt {
@@ -23,7 +20,7 @@ fn true_branch_unconditionally_exits(stmt: &Statement) -> Option<Loc> {
 }
 
 impl Detector for RedundantElseDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "redundant-else"
     }
 
@@ -70,21 +67,20 @@ function checkValueFixed(uint x) public pure returns (string memory) {
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
         visitor.on_statement(move |stmt, file| {
             if let Statement::If(_if_loc, _condition, true_body, else_body_opt) = stmt {
                 if else_body_opt.is_some() {
                     if let Some(exit_loc) = true_branch_unconditionally_exits(true_body.as_ref()) {
-                        detector_arc.add_location(loc_to_location(&exit_loc, file));
+                        return FindingData {
+                            detector_id: self.id(),
+                            location: loc_to_location(&exit_loc, file),
+                        }
+                        .into();
                     }
                 }
             }
+            Vec::new()
         });
     }
 }

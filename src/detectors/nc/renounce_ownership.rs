@@ -1,15 +1,12 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{Base, ContractPart, ContractTy};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct RenounceOwnershipDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct RenounceOwnershipDetector;
 
 fn is_ownable_inheritance(base: &Base) -> bool {
     base.name
@@ -19,7 +16,7 @@ fn is_ownable_inheritance(base: &Base) -> bool {
 }
 
 impl Detector for RenounceOwnershipDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "renounce-ownership-risk"
     }
 
@@ -54,16 +51,10 @@ contract MySaferContract is Ownable {
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
         visitor.on_contract(move |contract_def, file| {
             if matches!(contract_def.ty, ContractTy::Interface(_)) {
-                return;
+                return Vec::new();
             }
 
             let mut inherits_ownable = false;
@@ -78,7 +69,7 @@ contract MySaferContract is Ownable {
             }
 
             if !inherits_ownable {
-                return;
+                return Vec::new();
             }
 
             let mut defines_renounce_ownership = false;
@@ -94,8 +85,13 @@ contract MySaferContract is Ownable {
             }
 
             if inherits_ownable && !defines_renounce_ownership {
-                detector_arc.add_location(loc_to_location(&loc, file));
+                return FindingData {
+                    detector_id: self.id(),
+                    location: loc_to_location(&loc, file),
+                }
+                .into();
             }
+            Vec::new()
         });
     }
 }

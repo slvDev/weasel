@@ -1,18 +1,15 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{Expression, Statement};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct ComparisonWithoutEffectDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct ComparisonWithoutEffectDetector;
 
 impl Detector for ComparisonWithoutEffectDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "comparison-without-effect"
     }
 
@@ -63,12 +60,7 @@ modifier onlyIfPositiveFixed(uint val) {
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
         visitor.on_statement(move |stmt, file| {
             if let Statement::Expression(stmt_loc, expr) = stmt {
                 match expr {
@@ -78,11 +70,16 @@ modifier onlyIfPositiveFixed(uint val) {
                     | Expression::More(_, _, _)
                     | Expression::LessEqual(_, _, _)
                     | Expression::MoreEqual(_, _, _) => {
-                        detector_arc.add_location(loc_to_location(stmt_loc, file));
+                        return FindingData {
+                            detector_id: self.id(),
+                            location: loc_to_location(stmt_loc, file),
+                        }
+                        .into();
                     }
                     _ => {}
                 }
             }
+            Vec::new()
         });
     }
 }

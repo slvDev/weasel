@@ -1,18 +1,16 @@
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
+use crate::models::FindingData;
 use crate::utils::location::loc_to_location;
 use crate::{core::visitor::ASTVisitor, models::SolidityFile};
 use solang_parser::pt::{ContractPart, EventDefinition, SourceUnitPart};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct EventMissingIndexedArgsDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct EventMissingIndexedArgsDetector;
 
 impl Detector for EventMissingIndexedArgsDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "event-args-indexing"
     }
 
@@ -50,23 +48,20 @@ event Approval(address indexed owner, address indexed spender, uint256 indexed v
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc_file = self.clone();
+        let detector_id = self.id();
         visitor.on_source_unit_part(move |part, file| {
             if let SourceUnitPart::EventDefinition(event_def) = part {
-                check_event_indexing(event_def, file, &detector_arc_file);
+                return check_event_indexing(event_def, file, detector_id);
             }
+            Vec::new()
         });
 
-        let detector_arc_contract = self.clone();
         visitor.on_contract_part(move |part, file| {
             if let ContractPart::EventDefinition(event_def) = part {
-                check_event_indexing(event_def, file, &detector_arc_contract);
+                return check_event_indexing(event_def, file, detector_id);
             }
+            Vec::new()
         });
     }
 }
@@ -74,11 +69,11 @@ event Approval(address indexed owner, address indexed spender, uint256 indexed v
 fn check_event_indexing(
     event_def: &EventDefinition,
     file: &SolidityFile,
-    detector_arc: &Arc<EventMissingIndexedArgsDetector>,
-) {
+    detector_id: &'static str,
+) -> Vec<FindingData> {
     let num_params = event_def.fields.len();
     if num_params == 0 {
-        return;
+        return Vec::new();
     }
 
     let num_indexed = event_def.fields.iter().filter(|p| p.indexed).count();
@@ -89,8 +84,13 @@ fn check_event_indexing(
     };
 
     if should_flag {
-        detector_arc.add_location(loc_to_location(&event_def.loc, file));
+        return FindingData {
+            detector_id,
+            location: loc_to_location(&event_def.loc, file),
+        }
+        .into();
     }
+    Vec::new()
 }
 
 #[cfg(test)]

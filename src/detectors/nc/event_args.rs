@@ -1,18 +1,15 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{ContractPart, SourceUnitPart};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct EventArgsDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct EventArgsDetector;
 
 impl Detector for EventArgsDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "event-missing-args"
     }
 
@@ -48,27 +45,32 @@ event PauseStateChanged(address indexed changedBy, bool isPaused);
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc_file = self.clone();
+        let detector_id = self.id();
         visitor.on_source_unit_part(move |part, file| {
             if let SourceUnitPart::EventDefinition(event_def) = part {
                 if event_def.fields.is_empty() {
-                    detector_arc_file.add_location(loc_to_location(&event_def.loc, file));
+                    return FindingData {
+                        detector_id,
+                        location: loc_to_location(&event_def.loc, file),
+                    }
+                    .into();
                 }
             }
+            Vec::new()
         });
 
-        let detector_arc_contract = self.clone();
         visitor.on_contract_part(move |part, file| {
             if let ContractPart::EventDefinition(event_def) = part {
                 if event_def.fields.is_empty() {
-                    detector_arc_contract.add_location(loc_to_location(&event_def.loc, file));
+                    return FindingData {
+                        detector_id,
+                        location: loc_to_location(&event_def.loc, file),
+                    }
+                    .into();
                 }
             }
+            Vec::new()
         });
     }
 }

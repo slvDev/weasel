@@ -1,18 +1,15 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{Expression, Type};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct ExplicitNumTypesDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct ExplicitNumTypesDetector;
 
 impl Detector for ExplicitNumTypesDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "explicit-num-types"
     }
 
@@ -36,12 +33,8 @@ impl Detector for ExplicitNumTypesDetector {
         None
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
+        let detector_id = self.id();
 
         visitor.on_expression(move |expr, file| {
             if let Expression::Type(loc, ty) = expr {
@@ -49,17 +42,26 @@ impl Detector for ExplicitNumTypesDetector {
                 match ty {
                     Type::Int(_) => {
                         if type_len == 3 {
-                            detector_arc.add_location(loc_to_location(loc, file));
+                            return FindingData {
+                                detector_id,
+                                location: loc_to_location(loc, file),
+                            }
+                            .into();
                         }
                     }
                     Type::Uint(_) => {
                         if type_len == 4 {
-                            detector_arc.add_location(loc_to_location(loc, file));
+                            return FindingData {
+                                detector_id,
+                                location: loc_to_location(loc, file),
+                            }
+                            .into();
                         }
                     }
                     _ => {}
                 }
             }
+            Vec::new()
         });
     }
 }

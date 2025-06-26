@@ -1,19 +1,16 @@
-use crate::{
-    core::visitor::ASTVisitor,
-    detectors::Detector,
-    models::{finding::Location, severity::Severity, SolidityFile},
-    utils::ast_utils,
-};
+use crate::detectors::Detector;
+use crate::models::severity::Severity;
+use crate::models::SolidityFile;
+use crate::utils::ast_utils;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{Expression, Loc, Statement};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct MsgValueInLoopDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct MsgValueInLoopDetector;
 
 impl Detector for MsgValueInLoopDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "msg-value-in-loop"
     }
 
@@ -65,12 +62,7 @@ function distributePaymentFixed(address[] calldata addresses) external payable {
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
         visitor.on_statement(move |stmt, file| {
             // Define the predicate specific to finding `msg.value`
             let mut predicate =
@@ -111,10 +103,15 @@ function distributePaymentFixed(address[] calldata addresses) external payable {
                     &mut found_locations_in_loop_body,
                 );
 
-                for loc_data in found_locations_in_loop_body {
-                    detector_arc.add_location(loc_data);
-                }
+                return found_locations_in_loop_body
+                    .iter()
+                    .map(|loc_data| FindingData {
+                        detector_id: self.id(),
+                        location: loc_data.clone(),
+                    })
+                    .collect();
             }
+            Vec::new()
         });
     }
 }

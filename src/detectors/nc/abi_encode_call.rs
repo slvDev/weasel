@@ -1,18 +1,15 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::Expression;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct AbiEncodeCallDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct AbiEncodeCallDetector;
 
 impl Detector for AbiEncodeCallDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "prefer-encode-call"
     }
 
@@ -49,13 +46,7 @@ bytes memory data = abi.encodeCall(IERC20.transfer, (recipient, amount));
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
         visitor.on_expression(move |expr, file| {
             if let Expression::FunctionCall(loc, func_expr, _args) = expr {
                 if let Expression::MemberAccess(_member_loc, base_expr, member_ident) =
@@ -67,12 +58,17 @@ bytes memory data = abi.encodeCall(IERC20.transfer, (recipient, amount));
                             if member_name == "encodeWithSignature"
                                 || member_name == "encodeWithSelector"
                             {
-                                detector_arc.add_location(loc_to_location(loc, file));
+                                return FindingData {
+                                    detector_id: self.id(),
+                                    location: loc_to_location(loc, file),
+                                }
+                                .into();
                             }
                         }
                     }
                 }
             }
+            Vec::new()
         });
     }
 }

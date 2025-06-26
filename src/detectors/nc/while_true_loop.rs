@@ -1,21 +1,18 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::{
     helpers::CodeLocation,
     pt::{Expression, Loc, Statement},
 };
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct WhileTrueLoopDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct WhileTrueLoopDetector;
 
 impl Detector for WhileTrueLoopDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "while-true-loop"
     }
 
@@ -57,22 +54,21 @@ function processQueueWithFor() external {
         None
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
         visitor.on_statement(move |stmt, file| {
             if let Statement::While(loc, condition, body) = stmt {
                 if let Expression::BoolLiteral(_, true) = condition {
                     let issue_loc = Loc::default()
                         .with_start(loc.start())
                         .with_end(body.loc().start());
-                    detector_arc.add_location(loc_to_location(&issue_loc, file));
+                    return FindingData {
+                        detector_id: self.id(),
+                        location: loc_to_location(&issue_loc, file),
+                    }
+                    .into();
                 }
             }
+            Vec::new()
         });
     }
 }

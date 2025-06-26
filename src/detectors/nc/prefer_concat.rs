@@ -1,19 +1,16 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
 use crate::utils::version::solidity_version_req_matches;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::Expression;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct PreferConcatDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct PreferConcatDetector;
 
 impl Detector for PreferConcatDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "prefer-concat"
     }
 
@@ -52,10 +49,6 @@ impl Detector for PreferConcatDetector {
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
         let detector_arc = self.clone();
 
@@ -66,7 +59,7 @@ impl Detector for PreferConcatDetector {
             };
 
             if !version_is_gte_0_8 {
-                return;
+                return Vec::new();
             }
 
             if let Expression::FunctionCall(loc, func_expr, _args) = expr {
@@ -75,11 +68,16 @@ impl Detector for PreferConcatDetector {
                 {
                     if let Expression::Variable(abi_ident) = base_expr.as_ref() {
                         if abi_ident.name == "abi" && member_ident.name == "encodePacked" {
-                            detector_arc.add_location(loc_to_location(loc, file));
+                            return FindingData {
+                                detector_id: detector_arc.id(),
+                                location: loc_to_location(loc, file),
+                            }
+                            .into();
                         }
                     }
                 }
             }
+            Vec::new()
         });
     }
 }

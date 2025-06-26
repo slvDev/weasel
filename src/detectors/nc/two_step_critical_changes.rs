@@ -1,24 +1,21 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::{
     helpers::OptionalCodeLocation,
     pt::{Expression, Loc, Type},
 };
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct TwoStepCriticalChangesDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct TwoStepCriticalChangesDetector;
 
 const DANGEROUS_PREFIXES: [&str; 4] = ["set", "change", "update", "transfer"];
 const CRITICAL_ROLE_NAMES: [&str; 4] = ["owner", "admin", "governor", "guardian"];
 
 impl Detector for TwoStepCriticalChangesDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "two-step-critical-changes"
     }
 
@@ -62,13 +59,7 @@ function acceptOwner() external {
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
         visitor.on_function(move |func_def, file| {
             if let Some(name_ident) = &func_def.name {
                 let func_name = name_ident.name.to_lowercase();
@@ -78,7 +69,7 @@ function acceptOwner() external {
                     .any(|prefix| func_name.starts_with(prefix));
 
                 if !has_dangerous_prefix {
-                    return;
+                    return Vec::new();
                 }
 
                 let mut found_critical_param = false;
@@ -108,9 +99,14 @@ function acceptOwner() external {
                     let issue_loc = Loc::default()
                         .with_start(func_def.loc.start())
                         .with_end(body_loc.start());
-                    detector_arc.add_location(loc_to_location(&issue_loc, file));
+                    return FindingData {
+                        detector_id: self.id(),
+                        location: loc_to_location(&issue_loc, file),
+                    }
+                    .into();
                 }
             }
+            Vec::new()
         });
     }
 }

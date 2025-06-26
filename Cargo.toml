@@ -13,3 +13,5 @@ serde_json = "1.0"
 chrono = "0.4"
 solang-parser = "0.3.4"
 semver = "1.0"
+rayon = "1.7"
+

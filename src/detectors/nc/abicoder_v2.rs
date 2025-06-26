@@ -1,19 +1,16 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
 use crate::utils::version::solidity_version_req_matches;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{PragmaDirective, SourceUnitPart};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct UnnecessaryAbiCoderV2Detector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct UnnecessaryAbiCoderV2Detector;
 
 impl Detector for UnnecessaryAbiCoderV2Detector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "unnecessary-abicoder-v2"
     }
 
@@ -38,13 +35,7 @@ impl Detector for UnnecessaryAbiCoderV2Detector {
         None
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
         visitor.on_source_unit_part(move |part, file| {
             let version_is_gte_0_8 = match &file.solidity_version {
                 Some(version_str) => solidity_version_req_matches(version_str, ">=0.8.0"),
@@ -52,17 +43,22 @@ impl Detector for UnnecessaryAbiCoderV2Detector {
             };
 
             if !version_is_gte_0_8 {
-                return;
+                return Vec::new();
             }
 
             if let SourceUnitPart::PragmaDirective(pragma_box) = part {
                 let pragma = &**pragma_box;
                 if let PragmaDirective::Identifier(loc, Some(ident1), Some(ident2)) = pragma {
                     if ident1.name == "abicoder" && ident2.name == "v2" {
-                        detector_arc.add_location(loc_to_location(loc, file));
+                        return FindingData {
+                            detector_id: self.id(),
+                            location: loc_to_location(loc, file),
+                        }
+                        .into();
                     }
                 }
             }
+            Vec::new()
         });
     }
 }

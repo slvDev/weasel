@@ -1,18 +1,15 @@
-use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
+use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{
     ContractPart, FunctionAttribute, FunctionDefinition, FunctionTy, SourceUnitPart,
     VariableAttribute, VariableDefinition, Visibility,
 };
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct DefaultVisibilityDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct DefaultVisibilityDetector;
 
 /// Checks if a variable definition has explicit visibility.
 fn has_explicit_visibility_var(var_def: &VariableDefinition) -> bool {
@@ -40,7 +37,7 @@ fn has_explicit_visibility_func(func_def: &FunctionDefinition) -> bool {
 }
 
 impl Detector for DefaultVisibilityDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "default-visibility"
     }
 
@@ -76,44 +73,54 @@ address private owner;
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
+        let detector_id = self.id();
         // Check file-level state variables
         visitor.on_source_unit_part(move |part, file| {
             if let SourceUnitPart::VariableDefinition(var_def) = part {
                 if !has_explicit_visibility_var(var_def) {
-                    detector_arc.add_location(loc_to_location(&var_def.loc, file));
+                    return FindingData {
+                        detector_id,
+                        location: loc_to_location(&var_def.loc, file),
+                    }
+                    .into();
                 }
             }
+            Vec::new()
         });
 
         // Check contract-level state variables
-        let detector_arc = self.clone();
         visitor.on_contract_part(move |part, file| {
             if let ContractPart::VariableDefinition(var_def) = part {
                 if !has_explicit_visibility_var(var_def) {
-                    detector_arc.add_location(loc_to_location(&var_def.loc, file));
+                    return FindingData {
+                        detector_id,
+                        location: loc_to_location(&var_def.loc, file),
+                    }
+                    .into();
                 }
             }
+            Vec::new()
         });
 
         // Check functions
-        let detector_arc = self.clone();
         visitor.on_function(move |func_def, file| {
             // Ignore constructors and special fallbacks/receive functions
             match func_def.ty {
-                FunctionTy::Constructor | FunctionTy::Fallback | FunctionTy::Receive => return,
+                FunctionTy::Constructor | FunctionTy::Fallback | FunctionTy::Receive => {
+                    return Vec::new();
+                }
                 _ => {}
             }
 
             if !has_explicit_visibility_func(func_def) {
-                detector_arc.add_location(loc_to_location(&func_def.loc, file));
+                return FindingData {
+                    detector_id,
+                    location: loc_to_location(&func_def.loc, file),
+                }
+                .into();
             }
+            Vec::new()
         });
     }
 }

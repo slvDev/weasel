@@ -1,18 +1,16 @@
 use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
+use crate::models::FindingData;
 use crate::utils::location::loc_to_location;
 use solang_parser::pt::Expression;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct MagicNumberDetector {
-    locations: Arc<Mutex<Vec<Location>>>,
-}
+pub struct MagicNumberDetector;
 
 impl Detector for MagicNumberDetector {
-    fn id(&self) -> &str {
+    fn id(&self) -> &'static str {
         "magic-numbers"
     }
 
@@ -53,41 +51,51 @@ emit StatusUpdate(STATUS_SUCCESS);
         )
     }
 
-    fn get_locations_arc(&self) -> &Arc<Mutex<Vec<Location>>> {
-        &self.locations
-    }
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        let detector_arc = self.clone();
-
-        visitor.on_expression(move |expr, file| match expr {
-            Expression::FunctionCall(loc, _func, args) => {
-                for arg in args {
-                    match arg {
-                        Expression::NumberLiteral(_, _, _, _) => {
-                            detector_arc.add_location(loc_to_location(loc, file));
+        visitor.on_expression(move |expr, file| {
+            let mut findings = Vec::new();
+            match expr {
+                Expression::FunctionCall(loc, _func, args) => {
+                    for arg in args {
+                        match arg {
+                            Expression::NumberLiteral(_, _, _, _) => {
+                                findings.push(FindingData {
+                                    detector_id: self.id(),
+                                    location: loc_to_location(loc, file),
+                                });
+                            }
+                            Expression::HexNumberLiteral(_, _, _) => {
+                                findings.push(FindingData {
+                                    detector_id: self.id(),
+                                    location: loc_to_location(loc, file),
+                                });
+                            }
+                            _ => {}
                         }
-                        Expression::HexNumberLiteral(_, _, _) => {
-                            detector_arc.add_location(loc_to_location(loc, file));
-                        }
-                        _ => {}
                     }
                 }
-            }
-            Expression::NamedFunctionCall(loc, _func, args) => {
-                for arg in args {
-                    match &arg.expr {
-                        Expression::NumberLiteral(_, _, _, _) => {
-                            detector_arc.add_location(loc_to_location(loc, file));
+                Expression::NamedFunctionCall(loc, _func, args) => {
+                    for arg in args {
+                        match &arg.expr {
+                            Expression::NumberLiteral(_, _, _, _) => {
+                                findings.push(FindingData {
+                                    detector_id: self.id(),
+                                    location: loc_to_location(loc, file),
+                                });
+                            }
+                            Expression::HexNumberLiteral(_, _, _) => {
+                                findings.push(FindingData {
+                                    detector_id: self.id(),
+                                    location: loc_to_location(loc, file),
+                                });
+                            }
+                            _ => {}
                         }
-                        Expression::HexNumberLiteral(_, _, _) => {
-                            detector_arc.add_location(loc_to_location(loc, file));
-                        }
-                        _ => {}
                     }
                 }
+                _ => {}
             }
-            _ => {}
+            findings
         });
     }
 }
