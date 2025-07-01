@@ -151,9 +151,12 @@ impl AnalysisEngine {
         }
 
         // Add metadata
-        report.add_metadata("version", crate::core::version());
-        report.add_metadata("timestamp", &chrono::Utc::now().to_rfc3339());
-        report.add_metadata("total_findings", &results.total_findings().to_string());
+        report.add_metadata("Version:", crate::core::version());
+        report.add_metadata(
+            "Timestamp:",
+            &chrono::Utc::now().format("%d/%m/%Y %H:%M:%S").to_string(),
+        );
+        report.add_metadata("Total Findings:", &results.total_findings().to_string());
 
         report
     }

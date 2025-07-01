@@ -74,16 +74,7 @@ fn generate_markdown_report(report: &Report) -> String {
     let mut markdown = String::new();
 
     // Add title
-    markdown.push_str("# Smart Contract Analysis Report\n\n");
-
-    // Add metadata if present
-    if let Some(metadata) = &report.metadata {
-        markdown.push_str("## Metadata\n\n");
-        for (key, value) in metadata {
-            markdown.push_str(&format!("- **{}**: {}\n", key, value));
-        }
-        markdown.push_str("\n");
-    }
+    markdown.push_str("# Weasel Static Analysis Report\n\n");
 
     // Add comment if present
     if !report.comment.is_empty() {
@@ -107,10 +98,10 @@ fn generate_markdown_report(report: &Report) -> String {
         for (i, finding) in report.findings.iter().enumerate() {
             // Finding header with severity
             markdown.push_str(&format!(
-                "### {}. {} ({})\n\n",
+                "### [{}-{}] {}\n\n",
+                finding.severity,
                 i + 1,
-                finding.title,
-                finding.severity
+                finding.title
             ));
 
             // Description
@@ -175,6 +166,15 @@ fn generate_markdown_report(report: &Report) -> String {
     } else {
         markdown.push_str("## Findings\n\n");
         markdown.push_str("No issues found.\n\n");
+    }
+
+    // Add metadata if present
+    if let Some(metadata) = &report.metadata {
+        markdown.push_str("## Metadata\n\n");
+        for (key, value) in metadata {
+            markdown.push_str(&format!("- **{}**: {}\n", key, value));
+        }
+        markdown.push_str("\n");
     }
 
     // Add footnote if present

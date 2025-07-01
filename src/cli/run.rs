@@ -21,7 +21,7 @@ pub fn handle_run_command(
             report = report
                 .with_comment("This analysis was performed with the Weasel Static Analysis Tool.");
             report = report.with_footnote(
-                "Note: This tool is in development. For questions or feedback, please contact the Weasel team.",
+                "This tool is in development. For questions or feedback, please contact the Weasel team.",
             );
 
             if let Err(e) = output::generate_report(&report, &config.format, output) {
