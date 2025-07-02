@@ -28,9 +28,6 @@ impl Detector for FunctionLengthDetector {
         "Functions should ideally be kept concise (e.g., under 30 lines) to improve readability and maintainability. Consider breaking down long functions into smaller, more focused ones."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         None

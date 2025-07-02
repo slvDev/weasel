@@ -31,9 +31,6 @@ impl Detector for TwoStepCriticalChangesDetector {
         "Functions that change critical addresses like owner or admin in a single step are prone to errors (e.g., setting the wrong address). Consider implementing a two-step process (e.g., propose/accept) for safer changes."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

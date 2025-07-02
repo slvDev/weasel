@@ -28,9 +28,6 @@ impl Detector for AbiEncodeCallDetector {
         `abi.encodeCall` instead. [Read more about type safety](https://github.com/OpenZeppelin/openzeppelin-contracts/issues/3693)"
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

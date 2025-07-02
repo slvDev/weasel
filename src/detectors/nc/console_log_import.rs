@@ -25,9 +25,6 @@ impl Detector for ConsoleLogImportDetector {
         "Imports for `console.sol` or `console2.sol` (Hardhat/Foundry debugging tools) should not be present in production contracts."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         None

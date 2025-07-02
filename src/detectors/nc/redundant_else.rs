@@ -36,9 +36,6 @@ impl Detector for RedundantElseDetector {
         "When an `if` block is guaranteed to exit the function (e.g., via `return` or `revert`), the subsequent `else` block is unnecessary. The code within the `else` can be moved outside and after the `if` statement to reduce nesting."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

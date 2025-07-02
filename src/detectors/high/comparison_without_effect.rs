@@ -27,9 +27,6 @@ impl Detector for ComparisonWithoutEffectDetector {
         or an incomplete boolean assignment."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

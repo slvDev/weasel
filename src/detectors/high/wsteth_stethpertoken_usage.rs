@@ -28,9 +28,6 @@ impl Detector for WstethStethPerTokenUsageDetector {
         Ensure calculations correctly account for the stETH units returned and use appropriate price feeds (stETH/USD or ETH/USD combined with market stETH/ETH rate)."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

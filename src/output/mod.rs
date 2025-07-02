@@ -107,10 +107,6 @@ fn generate_markdown_report(report: &Report) -> String {
             // Description
             markdown.push_str(&format!("**Description**:\n{}\n\n", finding.description));
 
-            // Gas savings if applicable
-            if let Some(gas) = finding.gas_savings {
-                markdown.push_str(&format!("**Gas Savings**: {} gas\n\n", gas));
-            }
 
             // Example code if present
             if let Some(example) = &finding.example {

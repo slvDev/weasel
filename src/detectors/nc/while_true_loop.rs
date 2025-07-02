@@ -50,9 +50,6 @@ function processQueueWithFor() external {
         )
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
         visitor.on_statement(move |stmt, file| {

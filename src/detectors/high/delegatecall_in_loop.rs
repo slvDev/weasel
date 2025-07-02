@@ -26,9 +26,6 @@ impl Detector for DelegatecallInLoopDetector {
         "Executing `delegatecall` inside a loop is highly dangerous. It multiplies reentrancy risks, as external code runs with the caller's storage and permissions repeatedly. Malicious targets or manipulated loop iterations can corrupt state or cause denial of service via gas exhaustion. Refactor to avoid `delegatecall` in loops unless the targets and loop bounds are strictly controlled and understood."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

@@ -25,9 +25,6 @@ impl Detector for DraftDependencyDetector {
         "Importing contracts labeled as 'draft' (e.g., from OpenZeppelin drafts) can be risky as they may not be fully audited or could change significantly in future versions."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         None

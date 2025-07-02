@@ -25,9 +25,6 @@ impl Detector for ExplicitNumTypesDetector {
         "Implicitly sized types `int` and `uint` are aliases for `int256` and `uint256`, respectively. Using the explicit `int256` and `uint256` types enhances code clarity and consistency."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         None

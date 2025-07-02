@@ -32,9 +32,6 @@ impl Detector for PreferRequireDetector {
         or custom errors are more appropriate and informative."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

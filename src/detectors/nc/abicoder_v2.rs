@@ -27,9 +27,6 @@ impl Detector for UnnecessaryAbiCoderV2Detector {
         Explicitly enabling it via `pragma abicoder v2;` is redundant for such versions."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         None

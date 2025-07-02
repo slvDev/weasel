@@ -28,9 +28,6 @@ impl Detector for PreferConcatDetector {
         as they provide type safety and clearer intent, especially for strings."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

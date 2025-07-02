@@ -25,9 +25,6 @@ impl Detector for ConstantCaseDetector {
         "Constant and immutable variable names should use all capital letters with underscores separating words (CONSTANT_CASE)."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

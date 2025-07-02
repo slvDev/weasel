@@ -28,9 +28,6 @@ impl Detector for ArrayIndicesDetector {
         This can be particularly helpful in large codebases or when working with a team."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

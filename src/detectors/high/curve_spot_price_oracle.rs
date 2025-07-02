@@ -27,9 +27,6 @@ impl Detector for CurveSpotPriceOracleDetector {
         Use Chainlink Price Feeds or TWAP oracles instead for critical price data."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

@@ -26,9 +26,6 @@ impl Detector for MagicNumberDetector {
         "Numeric literals used directly as arguments in function calls can obscure meaning. Define and use constants instead for clarity and maintainability."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

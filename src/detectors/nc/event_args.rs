@@ -25,9 +25,6 @@ impl Detector for EventArgsDetector {
         "Events without parameters provide less context. Consider adding parameters (indexed where appropriate) to convey more information about the event, rather than using separate events for simple state changes."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

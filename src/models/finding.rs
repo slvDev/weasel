@@ -16,7 +16,6 @@ pub struct Finding {
     pub severity: Severity,
     pub title: String,
     pub description: String,
-    pub gas_savings: Option<usize>,
     pub example: Option<String>,
     pub locations: Vec<Location>,
 }

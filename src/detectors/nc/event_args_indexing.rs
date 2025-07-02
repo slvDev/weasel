@@ -26,9 +26,6 @@ impl Detector for EventMissingIndexedArgsDetector {
         "Events should follow indexing best practices: index up to three fields if possible, or all fields if less than three are available. Indexed fields allow off-chain tools to filter events efficiently."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

@@ -29,9 +29,6 @@ impl Detector for MsgValueInLoopDetector {
         Read `msg.value` once into a local variable *before* the loop."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

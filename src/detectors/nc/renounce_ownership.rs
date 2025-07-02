@@ -32,9 +32,6 @@ impl Detector for RenounceOwnershipDetector {
         "Leaving `renounceOwnership()` enabled on Ownable/Ownable2Step contracts without a specific plan to use it introduces risk. If renouncing ownership is not intended, consider overriding the function to disable it (e.g., by reverting)."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(

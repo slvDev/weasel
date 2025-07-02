@@ -53,9 +53,6 @@ impl Detector for DefaultVisibilityDetector {
         "State variables and functions should explicitly specify their visibility (public, private, internal, external). Default visibility (internal for state variables, public for functions) can be less clear."
     }
 
-    fn gas_savings(&self) -> Option<usize> {
-        None
-    }
 
     fn example(&self) -> Option<String> {
         Some(
