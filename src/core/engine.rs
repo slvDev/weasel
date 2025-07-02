@@ -57,7 +57,9 @@ impl AnalysisEngine {
         // not implemented
 
         // Gas detectors
-        // not implemented
+        self.register_detector(Arc::new(
+            crate::detectors::gas::ArrayLengthInLoopDetector::default(),
+        ));
 
         // NC detectors
         self.register_detector(Arc::new(
@@ -142,7 +144,6 @@ impl AnalysisEngine {
                     severity: detector.severity(),
                     title: detector.name().to_string(),
                     description: detector.description().to_string(),
-                    gas_savings: detector.gas_savings(),
                     example: detector.example(),
                     locations: locations.clone(),
                 };
