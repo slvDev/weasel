@@ -1,7 +1,7 @@
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::utils::location::loc_to_location;
-use crate::{core::visitor::ASTVisitor, models::FindingData};
+use crate::utils::ast_utils::find_in_expression;
+use crate::core::visitor::ASTVisitor;
 use solang_parser::pt::{Expression, Statement};
 use std::sync::Arc;
 
@@ -49,60 +49,13 @@ for (uint i = 0; i < length; i++) {
         visitor.on_statement(move |stmt, file| {
             if let Statement::For(_, _, condition_opt, _, _) = stmt {
                 if let Some(condition) = condition_opt {
-                    return self.find_length_member_access(condition, file);
+                    return find_in_expression(condition, file, self.id(), |expr| {
+                        matches!(expr, Expression::MemberAccess(_, _, identifier) if identifier.name == "length")
+                    });
                 }
             }
             Vec::new()
         });
-    }
-}
-
-impl ArrayLengthInLoopDetector {
-    fn find_length_member_access(
-        &self,
-        expr: &Expression,
-        file: &crate::models::SolidityFile,
-    ) -> Vec<FindingData> {
-        let mut findings = Vec::new();
-
-        match expr {
-            Expression::MemberAccess(loc, _, identifier) => {
-                if identifier.name == "length" {
-                    findings.push(FindingData {
-                        detector_id: self.id(),
-                        location: loc_to_location(loc, file),
-                    });
-                }
-            }
-            // Recursively check binary expressions (e.g., i < array.length)
-            Expression::Less(_, left, right)
-            | Expression::LessEqual(_, left, right)
-            | Expression::More(_, left, right)
-            | Expression::MoreEqual(_, left, right) => {
-                findings.extend(self.find_length_member_access(left, file));
-                findings.extend(self.find_length_member_access(right, file));
-            }
-            // Check other binary operations that might contain length access
-            Expression::Add(_, left, right)
-            | Expression::Subtract(_, left, right)
-            | Expression::Multiply(_, left, right)
-            | Expression::Divide(_, left, right)
-            | Expression::Modulo(_, left, right) => {
-                findings.extend(self.find_length_member_access(left, file));
-                findings.extend(self.find_length_member_access(right, file));
-            }
-            // Check parenthesized expressions
-            Expression::Parenthesis(_, inner) => {
-                findings.extend(self.find_length_member_access(inner, file));
-            }
-            // Check unary expressions
-            Expression::Negate(_, inner) => {
-                findings.extend(self.find_length_member_access(inner, file));
-            }
-            _ => {}
-        }
-
-        findings
     }
 }
 

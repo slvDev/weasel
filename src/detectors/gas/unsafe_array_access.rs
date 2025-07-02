@@ -1,7 +1,7 @@
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::utils::location::loc_to_location;
-use crate::{core::visitor::ASTVisitor, models::FindingData};
+use crate::utils::ast_utils::find_in_statement;
+use crate::core::visitor::ASTVisitor;
 use solang_parser::pt::{Expression, Statement};
 use std::sync::Arc;
 
@@ -53,115 +53,13 @@ for (uint i = 0; i < array.length; i++) {
             // Detect array access in any for-loop - developer can decide if bounds are safe
             if let Statement::For(_, _, _, _, body_opt) = stmt {
                 if let Some(body) = body_opt {
-                    return self.find_array_access_in_loop_body(body, file);
+                    return find_in_statement(body, file, self.id(), |expr| {
+                        matches!(expr, Expression::ArraySubscript(_, _, _))
+                    });
                 }
             }
             Vec::new()
         });
-    }
-}
-
-impl UnsafeArrayAccessDetector {
-
-    fn find_array_access_in_loop_body(
-        &self,
-        stmt: &Statement,
-        file: &crate::models::SolidityFile,
-    ) -> Vec<FindingData> {
-        let mut findings = Vec::new();
-        self.analyze_statement_for_array_access(stmt, file, &mut findings);
-        findings
-    }
-
-    fn analyze_statement_for_array_access(
-        &self,
-        stmt: &Statement,
-        file: &crate::models::SolidityFile,
-        findings: &mut Vec<FindingData>,
-    ) {
-        match stmt {
-            Statement::Block { statements, .. } => {
-                for inner_stmt in statements {
-                    self.analyze_statement_for_array_access(inner_stmt, file, findings);
-                }
-            }
-            Statement::Expression(_, expr) => {
-                self.check_expression_for_array_access(expr, file, findings);
-            }
-            Statement::VariableDefinition(_, _, expr_opt) => {
-                if let Some(expr) = expr_opt {
-                    self.check_expression_for_array_access(expr, file, findings);
-                }
-            }
-            Statement::If(_, condition, then_stmt, else_stmt_opt) => {
-                self.check_expression_for_array_access(condition, file, findings);
-                self.analyze_statement_for_array_access(then_stmt, file, findings);
-                if let Some(else_stmt) = else_stmt_opt {
-                    self.analyze_statement_for_array_access(else_stmt, file, findings);
-                }
-            }
-            Statement::While(_, condition, body) => {
-                self.check_expression_for_array_access(condition, file, findings);
-                self.analyze_statement_for_array_access(body, file, findings);
-            }
-            Statement::For(_, init_opt, condition_opt, post_opt, body_opt) => {
-                if let Some(init) = init_opt {
-                    self.analyze_statement_for_array_access(init, file, findings);
-                }
-                if let Some(condition) = condition_opt {
-                    self.check_expression_for_array_access(condition, file, findings);
-                }
-                if let Some(post) = post_opt {
-                    self.check_expression_for_array_access(post, file, findings);
-                }
-                if let Some(body) = body_opt {
-                    self.analyze_statement_for_array_access(body, file, findings);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    fn check_expression_for_array_access(
-        &self,
-        expr: &Expression,
-        file: &crate::models::SolidityFile,
-        findings: &mut Vec<FindingData>,
-    ) {
-        match expr {
-            Expression::ArraySubscript(loc, _, _) => {
-                findings.push(FindingData {
-                    detector_id: self.id(),
-                    location: loc_to_location(loc, file),
-                });
-            }
-            // Recursively check compound expressions
-            Expression::Assign(_, left, right) => {
-                self.check_expression_for_array_access(left, file, findings);
-                self.check_expression_for_array_access(right, file, findings);
-            }
-            Expression::Add(_, left, right)
-            | Expression::Subtract(_, left, right)
-            | Expression::Multiply(_, left, right)
-            | Expression::Divide(_, left, right)
-            | Expression::Modulo(_, left, right) => {
-                self.check_expression_for_array_access(left, file, findings);
-                self.check_expression_for_array_access(right, file, findings);
-            }
-            Expression::FunctionCall(_, func_expr, args) => {
-                self.check_expression_for_array_access(func_expr, file, findings);
-                for arg in args {
-                    self.check_expression_for_array_access(arg, file, findings);
-                }
-            }
-            Expression::MemberAccess(_, expr, _) => {
-                self.check_expression_for_array_access(expr, file, findings);
-            }
-            Expression::Parenthesis(_, inner) => {
-                self.check_expression_for_array_access(inner, file, findings);
-            }
-            _ => {}
-        }
     }
 }
 

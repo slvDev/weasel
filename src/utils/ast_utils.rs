@@ -1,5 +1,5 @@
 use crate::{
-    models::{finding::Location, SolidityFile},
+    models::{finding::FindingData, finding::Location, SolidityFile},
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{Expression, Loc, Statement, Type};
@@ -310,4 +310,163 @@ pub fn find_locations_in_expression<P>(
     P: FnMut(&Expression, &SolidityFile) -> Option<Loc>,
 {
     find_locations_in_expression_recursive(expression, file, predicate, found_locations);
+}
+
+/// Generic utility to find patterns in expressions with callback-based detection
+pub fn find_in_expression<F>(
+    expr: &Expression,
+    file: &SolidityFile,
+    detector_id: &'static str,
+    mut predicate: F,
+) -> Vec<FindingData>
+where
+    F: FnMut(&Expression) -> bool,
+{
+    let mut findings = Vec::new();
+    find_in_expression_recursive(expr, file, detector_id, &mut predicate, &mut findings);
+    findings
+}
+
+fn find_in_expression_recursive<F>(
+    expr: &Expression,
+    file: &SolidityFile,
+    detector_id: &'static str,
+    predicate: &mut F,
+    findings: &mut Vec<FindingData>,
+) where
+    F: FnMut(&Expression) -> bool,
+{
+    // Check current expression
+    if predicate(expr) {
+        if let Some(loc) = get_expression_location(expr) {
+            findings.push(FindingData {
+                detector_id,
+                location: loc_to_location(&loc, file),
+            });
+        }
+    }
+
+    // Recursively check sub-expressions
+    match expr {
+        // Binary expressions
+        Expression::Less(_, left, right)
+        | Expression::LessEqual(_, left, right)
+        | Expression::More(_, left, right)
+        | Expression::MoreEqual(_, left, right)
+        | Expression::Add(_, left, right)
+        | Expression::Subtract(_, left, right)
+        | Expression::Multiply(_, left, right)
+        | Expression::Divide(_, left, right)
+        | Expression::Modulo(_, left, right)
+        | Expression::Assign(_, left, right) => {
+            find_in_expression_recursive(left, file, detector_id, predicate, findings);
+            find_in_expression_recursive(right, file, detector_id, predicate, findings);
+        }
+        // Unary expressions
+        Expression::Parenthesis(_, inner) | Expression::Negate(_, inner) => {
+            find_in_expression_recursive(inner, file, detector_id, predicate, findings);
+        }
+        // Member access
+        Expression::MemberAccess(_, expr, _) => {
+            find_in_expression_recursive(expr, file, detector_id, predicate, findings);
+        }
+        // Function calls
+        Expression::FunctionCall(_, func_expr, args) => {
+            find_in_expression_recursive(func_expr, file, detector_id, predicate, findings);
+            for arg in args {
+                find_in_expression_recursive(arg, file, detector_id, predicate, findings);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Generic utility to find patterns in statements with callback-based detection
+pub fn find_in_statement<F>(
+    stmt: &Statement,
+    file: &SolidityFile,
+    detector_id: &'static str,
+    mut predicate: F,
+) -> Vec<FindingData>
+where
+    F: FnMut(&Expression) -> bool,
+{
+    let mut findings = Vec::new();
+    find_in_statement_recursive(stmt, file, detector_id, &mut predicate, &mut findings);
+    findings
+}
+
+fn find_in_statement_recursive<F>(
+    stmt: &Statement,
+    file: &SolidityFile,
+    detector_id: &'static str,
+    predicate: &mut F,
+    findings: &mut Vec<FindingData>,
+) where
+    F: FnMut(&Expression) -> bool,
+{
+    match stmt {
+        Statement::Block { statements, .. } => {
+            for inner_stmt in statements {
+                find_in_statement_recursive(inner_stmt, file, detector_id, predicate, findings);
+            }
+        }
+        Statement::Expression(_, expr) => {
+            find_in_expression_recursive(expr, file, detector_id, predicate, findings);
+        }
+        Statement::VariableDefinition(_, _, expr_opt) => {
+            if let Some(expr) = expr_opt {
+                find_in_expression_recursive(expr, file, detector_id, predicate, findings);
+            }
+        }
+        Statement::If(_, condition, then_stmt, else_stmt_opt) => {
+            find_in_expression_recursive(condition, file, detector_id, predicate, findings);
+            find_in_statement_recursive(then_stmt, file, detector_id, predicate, findings);
+            if let Some(else_stmt) = else_stmt_opt {
+                find_in_statement_recursive(else_stmt, file, detector_id, predicate, findings);
+            }
+        }
+        Statement::While(_, condition, body) | Statement::DoWhile(_, body, condition) => {
+            find_in_expression_recursive(condition, file, detector_id, predicate, findings);
+            find_in_statement_recursive(body, file, detector_id, predicate, findings);
+        }
+        Statement::For(_, init_opt, condition_opt, post_opt, body_opt) => {
+            if let Some(init) = init_opt {
+                find_in_statement_recursive(init, file, detector_id, predicate, findings);
+            }
+            if let Some(condition) = condition_opt {
+                find_in_expression_recursive(condition, file, detector_id, predicate, findings);
+            }
+            if let Some(post) = post_opt {
+                find_in_expression_recursive(post, file, detector_id, predicate, findings);
+            }
+            if let Some(body) = body_opt {
+                find_in_statement_recursive(body, file, detector_id, predicate, findings);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Helper function to get location from any expression
+fn get_expression_location(expr: &Expression) -> Option<Loc> {
+    match expr {
+        Expression::ArraySubscript(loc, _, _)
+        | Expression::MemberAccess(loc, _, _)
+        | Expression::Less(loc, _, _)
+        | Expression::More(loc, _, _)
+        | Expression::LessEqual(loc, _, _)
+        | Expression::MoreEqual(loc, _, _)
+        | Expression::Add(loc, _, _)
+        | Expression::Subtract(loc, _, _)
+        | Expression::Multiply(loc, _, _)
+        | Expression::Divide(loc, _, _)
+        | Expression::Modulo(loc, _, _)
+        | Expression::Assign(loc, _, _)
+        | Expression::Parenthesis(loc, _)
+        | Expression::Negate(loc, _)
+        | Expression::FunctionCall(loc, _, _) => Some(loc.clone()),
+        Expression::Variable(ident) => Some(ident.loc.clone()),
+        _ => None,
+    }
 }
