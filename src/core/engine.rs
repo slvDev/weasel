@@ -61,6 +61,9 @@ impl AnalysisEngine {
             crate::detectors::gas::ArrayLengthInLoopDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::BooleanComparisonDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::UnsafeArrayAccessDetector::default(),
         ));
 

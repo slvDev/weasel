@@ -457,6 +457,8 @@ fn get_expression_location(expr: &Expression) -> Option<Loc> {
         | Expression::More(loc, _, _)
         | Expression::LessEqual(loc, _, _)
         | Expression::MoreEqual(loc, _, _)
+        | Expression::Equal(loc, _, _)
+        | Expression::NotEqual(loc, _, _)
         | Expression::Add(loc, _, _)
         | Expression::Subtract(loc, _, _)
         | Expression::Multiply(loc, _, _)
