@@ -28,7 +28,6 @@ impl Detector for WstethStethPerTokenUsageDetector {
         Ensure calculations correctly account for the stETH units returned and use appropriate price feeds (stETH/USD or ETH/USD combined with market stETH/ETH rate)."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -55,7 +54,7 @@ contract VulnerableContract {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             if let Expression::FunctionCall(loc, func_expr, _) = expr {
                 if let Expression::MemberAccess(_, _, member_ident) = func_expr.as_ref() {
                     if member_ident.name == "stEthPerToken" {

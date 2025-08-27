@@ -27,7 +27,6 @@ impl Detector for CurveSpotPriceOracleDetector {
         Use Chainlink Price Feeds or TWAP oracles instead for critical price data."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -47,7 +46,7 @@ contract MyProtocol {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             if let Expression::FunctionCall(loc, func_expr, _) = expr {
                 if let Expression::MemberAccess(_, _, member_ident) = func_expr.as_ref() {
                     if member_ident.name == "get_dy_underlying" {

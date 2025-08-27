@@ -1,7 +1,7 @@
+use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
 use crate::utils::ast_utils::find_in_expression;
-use crate::core::visitor::ASTVisitor;
 use solang_parser::pt::{Expression, Statement};
 use std::sync::Arc;
 
@@ -46,7 +46,7 @@ for (uint i = 0; i < length; i++) {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_statement(move |stmt, file| {
+        visitor.on_statement(move |stmt, file, _context| {
             if let Statement::For(_, _, condition_opt, _, _) = stmt {
                 if let Some(condition) = condition_opt {
                     return find_in_expression(condition, file, self.id(), |expr| {

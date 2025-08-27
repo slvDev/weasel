@@ -25,7 +25,6 @@ impl Detector for EventArgsDetector {
         "Events without parameters provide less context. Consider adding parameters (indexed where appropriate) to convey more information about the event, rather than using separate events for simple state changes."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -44,7 +43,7 @@ event PauseStateChanged(address indexed changedBy, bool isPaused);
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
         let detector_id = self.id();
-        visitor.on_source_unit_part(move |part, file| {
+        visitor.on_source_unit_part(move |part, file, _context| {
             if let SourceUnitPart::EventDefinition(event_def) = part {
                 if event_def.fields.is_empty() {
                     return FindingData {
@@ -57,7 +56,7 @@ event PauseStateChanged(address indexed changedBy, bool isPaused);
             Vec::new()
         });
 
-        visitor.on_contract_part(move |part, file| {
+        visitor.on_contract_part(move |part, file, _context| {
             if let ContractPart::EventDefinition(event_def) = part {
                 if event_def.fields.is_empty() {
                     return FindingData {

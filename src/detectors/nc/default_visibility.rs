@@ -53,7 +53,6 @@ impl Detector for DefaultVisibilityDetector {
         "State variables and functions should explicitly specify their visibility (public, private, internal, external). Default visibility (internal for state variables, public for functions) can be less clear."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -73,7 +72,7 @@ address private owner;
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
         let detector_id = self.id();
         // Check file-level state variables
-        visitor.on_source_unit_part(move |part, file| {
+        visitor.on_source_unit_part(move |part, file, _context| {
             if let SourceUnitPart::VariableDefinition(var_def) = part {
                 if !has_explicit_visibility_var(var_def) {
                     return FindingData {
@@ -87,7 +86,7 @@ address private owner;
         });
 
         // Check contract-level state variables
-        visitor.on_contract_part(move |part, file| {
+        visitor.on_contract_part(move |part, file, _context| {
             if let ContractPart::VariableDefinition(var_def) = part {
                 if !has_explicit_visibility_var(var_def) {
                     return FindingData {
@@ -101,7 +100,7 @@ address private owner;
         });
 
         // Check functions
-        visitor.on_function(move |func_def, file| {
+        visitor.on_function(move |func_def, file, _context| {
             // Ignore constructors and special fallbacks/receive functions
             match func_def.ty {
                 FunctionTy::Constructor | FunctionTy::Fallback | FunctionTy::Receive => {

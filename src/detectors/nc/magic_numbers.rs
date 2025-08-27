@@ -26,7 +26,6 @@ impl Detector for MagicNumberDetector {
         "Numeric literals used directly as arguments in function calls can obscure meaning. Define and use constants instead for clarity and maintainability."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -49,7 +48,7 @@ emit StatusUpdate(STATUS_SUCCESS);
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             let mut findings = Vec::new();
             match expr {
                 Expression::FunctionCall(loc, _func, args) => {

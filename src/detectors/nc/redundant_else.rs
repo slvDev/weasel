@@ -36,7 +36,6 @@ impl Detector for RedundantElseDetector {
         "When an `if` block is guaranteed to exit the function (e.g., via `return` or `revert`), the subsequent `else` block is unnecessary. The code within the `else` can be moved outside and after the `if` statement to reduce nesting."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -65,7 +64,7 @@ function checkValueFixed(uint x) public pure returns (string memory) {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_statement(move |stmt, file| {
+        visitor.on_statement(move |stmt, file, _context| {
             if let Statement::If(_if_loc, _condition, true_body, else_body_opt) = stmt {
                 if else_body_opt.is_some() {
                     if let Some(exit_loc) = true_branch_unconditionally_exits(true_body.as_ref()) {

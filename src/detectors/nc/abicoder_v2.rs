@@ -27,13 +27,12 @@ impl Detector for UnnecessaryAbiCoderV2Detector {
         Explicitly enabling it via `pragma abicoder v2;` is redundant for such versions."
     }
 
-
     fn example(&self) -> Option<String> {
         None
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_source_unit_part(move |part, file| {
+        visitor.on_source_unit_part(move |part, file, _context| {
             let version_is_gte_0_8 = match &file.solidity_version {
                 Some(version_str) => solidity_version_req_matches(version_str, ">=0.8.0"),
                 None => false,

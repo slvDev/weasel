@@ -25,7 +25,6 @@ impl Detector for ConstantCaseDetector {
         "Constant and immutable variable names should use all capital letters with underscores separating words (CONSTANT_CASE)."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -42,7 +41,7 @@ address immutable DEPLOYER_ADDRESS;
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_variable(move |var_def, file| {
+        visitor.on_variable(move |var_def, file, _context| {
             let is_constant = var_def
                 .attrs
                 .iter()

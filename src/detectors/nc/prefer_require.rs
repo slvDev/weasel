@@ -32,7 +32,6 @@ impl Detector for PreferRequireDetector {
         or custom errors are more appropriate and informative."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -51,7 +50,7 @@ require(balance >= amount, "Insufficient balance");
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             if let Expression::FunctionCall(loc, func_expr, _args) = expr {
                 if let Expression::Variable(ident) = func_expr.as_ref() {
                     if ident.name == "assert" {

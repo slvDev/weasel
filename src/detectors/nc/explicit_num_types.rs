@@ -25,7 +25,6 @@ impl Detector for ExplicitNumTypesDetector {
         "Implicitly sized types `int` and `uint` are aliases for `int256` and `uint256`, respectively. Using the explicit `int256` and `uint256` types enhances code clarity and consistency."
     }
 
-
     fn example(&self) -> Option<String> {
         None
     }
@@ -33,7 +32,7 @@ impl Detector for ExplicitNumTypesDetector {
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
         let detector_id = self.id();
 
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             if let Expression::Type(loc, ty) = expr {
                 let type_len = loc.end() - loc.start();
                 match ty {

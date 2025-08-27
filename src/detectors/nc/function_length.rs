@@ -28,13 +28,12 @@ impl Detector for FunctionLengthDetector {
         "Functions should ideally be kept concise (e.g., under 30 lines) to improve readability and maintainability. Consider breaking down long functions into smaller, more focused ones."
     }
 
-
     fn example(&self) -> Option<String> {
         None
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_function(move |func_def, file| {
+        visitor.on_function(move |func_def, file, _context| {
             if func_def.body.is_none()
                 || matches!(
                     func_def.ty,

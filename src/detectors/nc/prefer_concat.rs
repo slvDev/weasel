@@ -28,7 +28,6 @@ impl Detector for PreferConcatDetector {
         as they provide type safety and clearer intent, especially for strings."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -49,7 +48,7 @@ impl Detector for PreferConcatDetector {
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
         let detector_arc = self.clone();
 
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             let version_is_gte_0_8 = match &file.solidity_version {
                 Some(version_str) => solidity_version_req_matches(version_str, ">=0.8.4"),
                 None => false,

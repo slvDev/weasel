@@ -50,7 +50,7 @@ function transfer() public {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             if let Expression::FunctionCall(loc, func_expr, args) = expr {
                 // Check if it's a simple identifier call to _msgSender with no arguments
                 if let Expression::Variable(identifier) = func_expr.as_ref() {

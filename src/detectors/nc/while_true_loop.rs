@@ -50,9 +50,8 @@ function processQueueWithFor() external {
         )
     }
 
-
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_statement(move |stmt, file| {
+        visitor.on_statement(move |stmt, file, _context| {
             if let Statement::While(loc, condition, body) = stmt {
                 if let Expression::BoolLiteral(_, true) = condition {
                     let issue_loc = Loc::default()

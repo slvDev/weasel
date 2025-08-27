@@ -28,7 +28,6 @@ impl Detector for AbiEncodeCallDetector {
         `abi.encodeCall` instead. [Read more about type safety](https://github.com/OpenZeppelin/openzeppelin-contracts/issues/3693)"
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -44,7 +43,7 @@ bytes memory data = abi.encodeCall(IERC20.transfer, (recipient, amount));
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             if let Expression::FunctionCall(loc, func_expr, _args) = expr {
                 if let Expression::MemberAccess(_member_loc, base_expr, member_ident) =
                     func_expr.as_ref()

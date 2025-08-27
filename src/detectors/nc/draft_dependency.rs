@@ -25,13 +25,12 @@ impl Detector for DraftDependencyDetector {
         "Importing contracts labeled as 'draft' (e.g., from OpenZeppelin drafts) can be risky as they may not be fully audited or could change significantly in future versions."
     }
 
-
     fn example(&self) -> Option<String> {
         None
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_source_unit_part(move |part, file| {
+        visitor.on_source_unit_part(move |part, file, _context| {
             if let SourceUnitPart::ImportDirective(import) = part {
                 let (path_literal, loc) = match import {
                     Import::Plain(literal, loc) => (Some(literal), loc),

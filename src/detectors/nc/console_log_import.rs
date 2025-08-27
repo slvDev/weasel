@@ -25,13 +25,12 @@ impl Detector for ConsoleLogImportDetector {
         "Imports for `console.sol` or `console2.sol` (Hardhat/Foundry debugging tools) should not be present in production contracts."
     }
 
-
     fn example(&self) -> Option<String> {
         None
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_source_unit_part(move |part, file| {
+        visitor.on_source_unit_part(move |part, file, _context| {
             if let SourceUnitPart::ImportDirective(import) = part {
                 let (path_literal, loc) = match import {
                     Import::Plain(literal, loc) => (Some(literal), loc),

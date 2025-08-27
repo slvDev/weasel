@@ -31,7 +31,6 @@ impl Detector for TwoStepCriticalChangesDetector {
         "Functions that change critical addresses like owner or admin in a single step are prone to errors (e.g., setting the wrong address). Consider implementing a two-step process (e.g., propose/accept) for safer changes."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -57,7 +56,7 @@ function acceptOwner() external {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_function(move |func_def, file| {
+        visitor.on_function(move |func_def, file, _context| {
             if let Some(name_ident) = &func_def.name {
                 let func_name = name_ident.name.to_lowercase();
 

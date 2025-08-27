@@ -28,7 +28,6 @@ impl Detector for ArrayIndicesDetector {
         This can be particularly helpful in large codebases or when working with a team."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             "```solidity\n// Instead of:\narray[0] = 1;\narray[1] = 2;\n\n// Consider using:\nenum StorageSlot { First, Second }\n...\narray[uint(StorageSlot.First)] = 1;\narray[uint(StorageSlot.Second)] = 2;\n```".to_string(),
@@ -36,7 +35,7 @@ impl Detector for ArrayIndicesDetector {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             if let Expression::ArraySubscript(loc, _array_expr, index_opt) = expr {
                 if let Some(index_expr) = index_opt {
                     if let Expression::NumberLiteral(_, _, _, _) = index_expr.as_ref() {

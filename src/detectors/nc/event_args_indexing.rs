@@ -26,7 +26,6 @@ impl Detector for EventMissingIndexedArgsDetector {
         "Events should follow indexing best practices: index up to three fields if possible, or all fields if less than three are available. Indexed fields allow off-chain tools to filter events efficiently."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -47,14 +46,14 @@ event Approval(address indexed owner, address indexed spender, uint256 indexed v
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
         let detector_id = self.id();
-        visitor.on_source_unit_part(move |part, file| {
+        visitor.on_source_unit_part(move |part, file, _context| {
             if let SourceUnitPart::EventDefinition(event_def) = part {
                 return check_event_indexing(event_def, file, detector_id);
             }
             Vec::new()
         });
 
-        visitor.on_contract_part(move |part, file| {
+        visitor.on_contract_part(move |part, file, _context| {
             if let ContractPart::EventDefinition(event_def) = part {
                 return check_event_indexing(event_def, file, detector_id);
             }

@@ -1,7 +1,7 @@
+use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
 use crate::utils::ast_utils::find_in_statement;
-use crate::core::visitor::ASTVisitor;
 use solang_parser::pt::{Expression, Statement};
 use std::sync::Arc;
 
@@ -49,7 +49,7 @@ for (uint i = 0; i < array.length; i++) {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_statement(move |stmt, file| {
+        visitor.on_statement(move |stmt, file, _context| {
             // Detect array access in any for-loop - developer can decide if bounds are safe
             if let Statement::For(_, _, _, _, body_opt) = stmt {
                 if let Some(body) = body_opt {
@@ -112,14 +112,30 @@ mod tests {
         let detector = Arc::new(UnsafeArrayAccessDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
 
-        assert_eq!(locations.len(), 5, "Should detect 5 array access opportunities");
+        assert_eq!(
+            locations.len(),
+            5,
+            "Should detect 5 array access opportunities"
+        );
 
         // Check specific line numbers for array access that could be optimized
         assert_eq!(locations[0].line, 9, "First detection should be on line 9");
-        assert_eq!(locations[1].line, 15, "Second detection should be on line 15");  
-        assert_eq!(locations[2].line, 15, "Third detection should be on line 15");
-        assert_eq!(locations[3].line, 21, "Fourth detection should be on line 21");
-        assert_eq!(locations[4].line, 27, "Fifth detection should be on line 27");
+        assert_eq!(
+            locations[1].line, 15,
+            "Second detection should be on line 15"
+        );
+        assert_eq!(
+            locations[2].line, 15,
+            "Third detection should be on line 15"
+        );
+        assert_eq!(
+            locations[3].line, 21,
+            "Fourth detection should be on line 21"
+        );
+        assert_eq!(
+            locations[4].line, 27,
+            "Fifth detection should be on line 27"
+        );
     }
 
     #[test]
@@ -151,6 +167,10 @@ mod tests {
         let detector = Arc::new(UnsafeArrayAccessDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
 
-        assert_eq!(locations.len(), 0, "Should not detect any issues when no array access in loops");
+        assert_eq!(
+            locations.len(),
+            0,
+            "Should not detect any issues when no array access in loops"
+        );
     }
 }

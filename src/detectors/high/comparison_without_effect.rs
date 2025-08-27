@@ -27,7 +27,6 @@ impl Detector for ComparisonWithoutEffectDetector {
         or an incomplete boolean assignment."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -58,7 +57,7 @@ modifier onlyIfPositiveFixed(uint val) {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_statement(move |stmt, file| {
+        visitor.on_statement(move |stmt, file, _context| {
             if let Statement::Expression(stmt_loc, expr) = stmt {
                 match expr {
                     Expression::Equal(_, _, _)

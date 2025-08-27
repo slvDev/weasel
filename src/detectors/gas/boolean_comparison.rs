@@ -45,7 +45,7 @@ require(!value);
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_expression(move |expr, file| {
+        visitor.on_expression(move |expr, file, _context| {
             if let Expression::Equal(loc, left, right) | Expression::NotEqual(loc, left, right) =
                 expr
             {
