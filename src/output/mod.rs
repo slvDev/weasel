@@ -107,7 +107,6 @@ fn generate_markdown_report(report: &Report) -> String {
             // Description
             markdown.push_str(&format!("**Description**:\n{}\n\n", finding.description));
 
-
             // Example code if present
             if let Some(example) = &finding.example {
                 markdown.push_str(&format!("**Recommendation**:\n{}\n\n", example));

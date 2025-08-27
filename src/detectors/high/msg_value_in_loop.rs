@@ -1,6 +1,5 @@
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::models::SolidityFile;
 use crate::utils::ast_utils;
 use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{Expression, Loc, Statement};
