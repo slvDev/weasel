@@ -1,9 +1,16 @@
+use std::path::Path;
+
 use crate::{
-    models::{finding::FindingData, finding::Location, SolidityFile},
+    models::{
+        finding::{FindingData, Location},
+        ContractInfo, ContractType, ImportInfo, SolidityFile,
+    },
     utils::location::loc_to_location,
 };
-use solang_parser::pt::{Expression, Loc, Statement, Type};
-
+use solang_parser::pt::{
+    ContractDefinition, ContractPart, Expression, Import, Loc, PragmaDirective, SourceUnit,
+    SourceUnitPart, Statement, Type, VariableDefinition, VersionComparator, VersionOp,
+};
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
     file: &SolidityFile,
@@ -471,4 +478,201 @@ fn get_expression_location(expr: &Expression) -> Option<Loc> {
         Expression::Variable(ident) => Some(ident.loc.clone()),
         _ => None,
     }
+}
+
+pub fn extract_imports(source_unit: &SourceUnit) -> Result<Vec<ImportInfo>, String> {
+    let mut imports = Vec::new();
+
+    for part in &source_unit.0 {
+        if let SourceUnitPart::ImportDirective(import) = part {
+            let import_info = process_import_directive(import)?;
+            imports.push(import_info);
+        }
+    }
+
+    Ok(imports)
+}
+
+/// Process a single import directive
+pub fn process_import_directive(import: &Import) -> Result<ImportInfo, String> {
+    use solang_parser::pt::ImportPath;
+
+    // Extract import path and symbols based on import type
+    let (path_literal, symbols) = match import {
+        Import::Plain(literal, _loc) => {
+            // Simple import without specific symbols: import "hardhat/console.sol";
+            (Some(literal), Vec::new())
+        }
+        Import::GlobalSymbol(literal, symbol, _loc) => {
+            // Import with global symbol: import <0> as <1>;
+            let symbols = vec![symbol.name.clone()];
+            (Some(literal), symbols)
+        }
+        Import::Rename(literal, symbol_list, _loc) => {
+            // Import with renamed symbols: import { console2 as console } from "forge-std/console2.sol";
+            let symbols = symbol_list
+                .iter()
+                .map(|(original, alias)| {
+                    // Use alias if provided, otherwise use original name
+                    alias
+                        .as_ref()
+                        .map(|a| a.name.clone())
+                        .unwrap_or_else(|| original.name.clone())
+                })
+                .collect();
+            (Some(literal), symbols)
+        }
+    };
+
+    // Extract actual import path string
+    let import_path = if let Some(ImportPath::Filename(filepath)) = path_literal {
+        filepath.string.clone()
+    } else {
+        return Err("Invalid import path format".to_string());
+    };
+
+    Ok(ImportInfo {
+        import_path,
+        resolved_path: None, // Will be resolved later if needed
+        symbols,
+    })
+}
+
+/// Formats a VersionOp into its string representation.
+/// Returns None for operators not directly supported by semver::VersionReq.
+fn format_version_op(op: &VersionOp) -> Option<&'static str> {
+    match op {
+        VersionOp::GreaterEq => Some(">="),
+        VersionOp::Greater => Some(">"),
+        VersionOp::LessEq => Some("<="),
+        VersionOp::Less => Some("<"),
+        VersionOp::Exact => Some("="), // Represent plain version, e.g., pragma solidity =0.8.0;
+        VersionOp::Caret => Some("^"),
+        VersionOp::Tilde => Some("~"),
+        VersionOp::Wildcard => None, // Wildcard operator not supported
+    }
+}
+
+/// Formats a single VersionComparator into a string suitable for semver parsing.
+/// Returns None if the comparator uses unsupported features (like Or, Wildcard).
+fn format_version_comparator(comp: &VersionComparator) -> Option<String> {
+    match comp {
+        VersionComparator::Plain { version, .. } => Some(version.join(".")),
+        VersionComparator::Operator { op, version, .. } => {
+            format_version_op(op).map(|op_str| format!("{}{}", op_str, version.join(".")))
+        }
+        // Convert Solidity range "A - B" into semver range ">=A <=B"
+        VersionComparator::Range { from, to, .. } => {
+            Some(format!(">= {} <= {}", from.join("."), to.join(".")))
+        }
+        // The semver crate does not support OR logic directly in VersionReq::parse
+        VersionComparator::Or { .. } => None,
+    }
+}
+
+/// Extracts the solidity version requirement string from a pragma directive.
+pub fn extract_solidity_version_from_pragma(pragma: &PragmaDirective) -> Option<String> {
+    match pragma {
+        PragmaDirective::Version(_loc, ident, version_req) if ident.name == "solidity" => {
+            let mut formatted_parts = Vec::new();
+            for comp in version_req {
+                match format_version_comparator(comp) {
+                    Some(part) => formatted_parts.push(part),
+                    None => return None,
+                }
+            }
+            if formatted_parts.is_empty() {
+                None
+            } else {
+                Some(formatted_parts.join(" "))
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Extract contract information from source unit
+fn extract_contracts(
+    source_unit: &SourceUnit,
+    file_path: &Path,
+) -> Result<Vec<ContractInfo>, String> {
+    let mut contracts = Vec::new();
+
+    for part in &source_unit.0 {
+        if let SourceUnitPart::ContractDefinition(contract_def) = part {
+            let contract_info = extract_contract_info(contract_def, file_path)?;
+            contracts.push(contract_info);
+        }
+    }
+
+    Ok(contracts)
+}
+
+/// Extract state variables from a contract definition
+pub fn extract_state_variables(contract_def: &ContractDefinition) -> Vec<String> {
+    let mut state_variables = Vec::new();
+
+    for part in &contract_def.parts {
+        if let ContractPart::VariableDefinition(var_def) = part {
+            if let Some(name) = &var_def.name {
+                state_variables.push(name.name.clone());
+            }
+        }
+    }
+
+    state_variables
+}
+
+/// Extract information from a single contract definition
+pub fn extract_contract_info(
+    contract_def: &ContractDefinition,
+    file_path: &Path,
+) -> Result<ContractInfo, String> {
+    let name = contract_def.name.as_ref().ok_or("Unnamed contract found")?;
+
+    let contract_type = match contract_def.ty {
+        solang_parser::pt::ContractTy::Abstract(_) => ContractType::Abstract,
+        solang_parser::pt::ContractTy::Contract(_) => ContractType::Contract,
+        solang_parser::pt::ContractTy::Interface(_) => ContractType::Interface,
+        solang_parser::pt::ContractTy::Library(_) => ContractType::Library,
+    };
+
+    // Extract direct base contracts from inheritance list
+    let direct_bases: Vec<String> = contract_def
+        .base
+        .iter()
+        .map(|base| {
+            base.name
+                .identifiers
+                .last() // Safer that first, but in solidity should only ONE identifier
+                .map(|ident| ident.name.clone())
+                .unwrap_or_default()
+        })
+        .collect();
+
+    // Extract state variables
+    let state_variables = extract_state_variables(contract_def);
+
+    // Extract function definitions
+    let function_definitions = contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::FunctionDefinition(func_def) = part {
+                func_def.name.as_ref().map(|n| n.name.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    Ok(ContractInfo {
+        name: name.name.clone(),
+        contract_type,
+        file_path: file_path.to_string_lossy().to_string(),
+        direct_bases,
+        inheritance_chain: Vec::new(), // Will be populated in second pass
+        state_variables,
+        function_definitions,
+    })
 }
