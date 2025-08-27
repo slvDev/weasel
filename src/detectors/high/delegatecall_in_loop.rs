@@ -1,6 +1,5 @@
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::models::SolidityFile;
 use crate::utils::ast_utils;
 use crate::{core::visitor::ASTVisitor, models::FindingData};
 use solang_parser::pt::{Expression, Loc, Statement};
@@ -26,7 +25,6 @@ impl Detector for DelegatecallInLoopDetector {
         "Executing `delegatecall` inside a loop is highly dangerous. It multiplies reentrancy risks, as external code runs with the caller's storage and permissions repeatedly. Malicious targets or manipulated loop iterations can corrupt state or cause denial of service via gas exhaustion. Refactor to avoid `delegatecall` in loops unless the targets and loop bounds are strictly controlled and understood."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -43,52 +41,50 @@ function processDelegated(address[] calldata targets, bytes[] calldata data) ext
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_statement(move |stmt, file| {
-            let mut predicate =
-                |expr_to_check: &Expression, _file_context: &SolidityFile| -> Option<Loc> {
-                    if let Expression::FunctionCall(loc, func_expr, _) = expr_to_check {
-                        if let Expression::MemberAccess(_, _, member_ident) = func_expr.as_ref() {
-                            if member_ident.name == "delegatecall" {
-                                return Some(loc.clone());
-                            }
+        visitor.on_statement(move |stmt, file, _context| {
+            // Extract loop body if this is a loop statement
+            let loop_body = match stmt {
+                Statement::For(_, _, _, _, Some(body)) => Some(body.as_ref()),
+                Statement::While(_, _, body) | Statement::DoWhile(_, body, _) => {
+                    Some(body.as_ref())
+                }
+                _ => None,
+            };
+
+            // If not a loop, nothing to check
+            let Some(body) = loop_body else {
+                return Vec::new();
+            };
+
+            // Define predicate to find delegatecall expressions
+            let mut is_delegatecall = |expr: &Expression, _: &_| -> Option<Loc> {
+                if let Expression::FunctionCall(loc, func_expr, _) = expr {
+                    if let Expression::MemberAccess(_, _, member) = func_expr.as_ref() {
+                        if member.name == "delegatecall" {
+                            return Some(loc.clone());
                         }
                     }
-                    None
-                };
-
-            let mut loop_body_to_search: Option<&Statement> = None;
-
-            match stmt {
-                Statement::For(_, _, _, _, Some(body_statement_box)) => {
-                    loop_body_to_search = Some(body_statement_box.as_ref());
                 }
-                Statement::While(_, _, body_statement_box) => {
-                    loop_body_to_search = Some(body_statement_box.as_ref());
-                }
-                Statement::DoWhile(_, body_statement_box, _) => {
-                    loop_body_to_search = Some(body_statement_box.as_ref());
-                }
-                _ => {}
-            }
+                None
+            };
 
-            if let Some(body) = loop_body_to_search {
-                let mut found_locations_in_loop_body = Vec::new();
-                ast_utils::find_locations_in_statement(
-                    body,
-                    file,
-                    &mut predicate,
-                    &mut found_locations_in_loop_body,
-                );
+            // Search for delegatecall in the loop body
+            let mut delegatecall_locations = Vec::new();
+            ast_utils::find_locations_in_statement(
+                body,
+                file,
+                &mut is_delegatecall,
+                &mut delegatecall_locations,
+            );
 
-                return found_locations_in_loop_body
-                    .iter()
-                    .map(|loc_data| FindingData {
-                        detector_id: self.id(),
-                        location: loc_data.clone(),
-                    })
-                    .collect();
-            }
-            Vec::new()
+            // Convert found locations to findings
+            delegatecall_locations
+                .into_iter()
+                .map(|location| FindingData {
+                    detector_id: self.id(),
+                    location,
+                })
+                .collect()
         });
     }
 }

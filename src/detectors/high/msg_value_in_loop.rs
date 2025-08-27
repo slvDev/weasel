@@ -29,7 +29,6 @@ impl Detector for MsgValueInLoopDetector {
         Read `msg.value` once into a local variable *before* the loop."
     }
 
-
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
@@ -60,55 +59,52 @@ function distributePaymentFixed(address[] calldata addresses) external payable {
     }
 
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
-        visitor.on_statement(move |stmt, file| {
-            // Define the predicate specific to finding `msg.value`
-            let mut predicate =
-                |expr_to_check: &Expression, _file_context: &SolidityFile| -> Option<Loc> {
-                    if let Expression::MemberAccess(loc, base_expr, member_ident) = expr_to_check {
-                        if member_ident.name == "value" {
-                            if let Expression::Variable(base_ident) = base_expr.as_ref() {
-                                if base_ident.name == "msg" {
-                                    return Some(loc.clone());
-                                }
+        visitor.on_statement(move |stmt, file, _context| {
+            // Extract loop body if this is a loop statement
+            let loop_body = match stmt {
+                Statement::For(_, _, _, _, Some(body)) => Some(body.as_ref()),
+                Statement::While(_, _, body) | Statement::DoWhile(_, body, _) => {
+                    Some(body.as_ref())
+                }
+                _ => None,
+            };
+
+            // If not a loop, nothing to check
+            let Some(body) = loop_body else {
+                return Vec::new();
+            };
+
+            // Define predicate to find msg.value expressions
+            let mut is_msg_value = |expr: &Expression, _: &_| -> Option<Loc> {
+                if let Expression::MemberAccess(loc, base_expr, member) = expr {
+                    if member.name == "value" {
+                        if let Expression::Variable(base_var) = base_expr.as_ref() {
+                            if base_var.name == "msg" {
+                                return Some(loc.clone());
                             }
                         }
                     }
-                    None
-                };
-
-            let mut loop_body_to_search: Option<&Statement> = None;
-
-            match stmt {
-                Statement::For(_, _, _, _, Some(body_statement_box)) => {
-                    loop_body_to_search = Some(body_statement_box.as_ref());
                 }
-                Statement::While(_, _, body_statement_box) => {
-                    loop_body_to_search = Some(body_statement_box.as_ref());
-                }
-                Statement::DoWhile(_, body_statement_box, _) => {
-                    loop_body_to_search = Some(body_statement_box.as_ref());
-                }
-                _ => {}
-            }
+                None
+            };
 
-            if let Some(body) = loop_body_to_search {
-                let mut found_locations_in_loop_body = Vec::new();
-                ast_utils::find_locations_in_statement(
-                    body,
-                    file,
-                    &mut predicate,
-                    &mut found_locations_in_loop_body,
-                );
+            // Search for msg.value in the loop body
+            let mut msg_value_locations = Vec::new();
+            ast_utils::find_locations_in_statement(
+                body,
+                file,
+                &mut is_msg_value,
+                &mut msg_value_locations,
+            );
 
-                return found_locations_in_loop_body
-                    .iter()
-                    .map(|loc_data| FindingData {
-                        detector_id: self.id(),
-                        location: loc_data.clone(),
-                    })
-                    .collect();
-            }
-            Vec::new()
+            // Convert found locations to findings
+            msg_value_locations
+                .into_iter()
+                .map(|location| FindingData {
+                    detector_id: self.id(),
+                    location,
+                })
+                .collect()
         });
     }
 }
