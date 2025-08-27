@@ -10,8 +10,16 @@ pub fn handle_run_command(
     format: Option<String>,
     output: Option<PathBuf>,
     config_path: Option<PathBuf>,
+    remappings: Option<Vec<String>>,
 ) {
-    let config = load_config(scope, exclude, min_severity, format, config_path);
+    let config = load_config(
+        scope,
+        exclude,
+        min_severity,
+        format,
+        remappings,
+        config_path,
+    );
 
     let mut engine = AnalysisEngine::new(&config);
     engine.register_built_in_detectors();

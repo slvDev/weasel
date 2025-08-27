@@ -26,6 +26,14 @@ pub const DEFAULT_CONFIG_CONTENT: &str = r#"# weasel.toml
 # Options: "json", "md" (or "markdown")
 # If omitted, it defaults to "md".
 # output_format = "md"
+
+# Manual remappings for import resolution
+# Format: "prefix=target_path"
+# Example: remappings = ["@openzeppelin/=lib/openzeppelin-contracts/contracts/", "@solmate/=lib/solmate/src/"]
+# remappings = [
+#     "@openzeppelin/=lib/openzeppelin-contracts/contracts/",
+#     "@solmate/=lib/solmate/src/"
+# ]
 "#;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -38,6 +46,8 @@ pub struct Config {
     pub min_severity: Severity,
     #[serde(default)]
     pub format: ReportFormat,
+    #[serde(default)]
+    pub remappings: Vec<String>,
 }
 
 fn default_scope() -> Vec<PathBuf> {
@@ -55,6 +65,7 @@ impl Default for Config {
             exclude: default_exclude(),
             min_severity: Severity::default(),
             format: ReportFormat::default(),
+            remappings: Vec::new(),
         }
     }
 }
@@ -64,6 +75,7 @@ pub fn load_config(
     exclude: Option<Vec<PathBuf>>,
     min_severity: Option<String>,
     format: Option<String>,
+    remappings: Option<Vec<String>>,
     config_path: Option<PathBuf>,
 ) -> Config {
     let default_path = PathBuf::from("weasel.toml");
@@ -111,6 +123,7 @@ pub fn load_config(
                 ReportFormat::default()
             })
         }),
+        remappings: remappings.unwrap_or(config.remappings),
     }
 }
 

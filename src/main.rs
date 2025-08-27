@@ -39,6 +39,9 @@ enum Commands {
 
         #[arg(short, long, value_name = "PATH_TO_CONFIG")]
         config: Option<PathBuf>,
+
+        #[arg(short, long)]
+        remappings: Option<Vec<String>>,
     },
     Detectors {
         #[arg(short, long)]
@@ -63,8 +66,17 @@ fn main() {
             format,
             output,
             config,
+            remappings,
         } => {
-            cli::run::handle_run_command(scope, exclude, min_severity, format, output, config);
+            cli::run::handle_run_command(
+                scope,
+                exclude,
+                min_severity,
+                format,
+                output,
+                config,
+                remappings,
+            );
         }
         Commands::Detectors { severity, details } => {
             cli::detectors::handle_detectors_command(severity, details);
