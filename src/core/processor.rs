@@ -1,3 +1,4 @@
+use crate::core::context::AnalysisContext;
 use crate::core::finding_collector::FindingCollector;
 use crate::core::visitor::ASTVisitor;
 use crate::models::Location;
@@ -13,7 +14,12 @@ impl Processor {
         Self {}
     }
 
-    pub fn process_files(&self, files: &[SolidityFile], visitor: &ASTVisitor) -> AnalysisResults {
+    pub fn process_files(
+        &self,
+        files: &[SolidityFile],
+        visitor: &ASTVisitor,
+        context: &AnalysisContext,
+    ) -> AnalysisResults {
         let thread_count = self.get_thread_count();
         println!(
             "Processing {} files using {} threads",
@@ -34,7 +40,7 @@ impl Processor {
                 let mut collector = FindingCollector::new();
 
                 // Run traverse on each file and collect findings
-                let findings = visitor.traverse(file);
+                let findings = visitor.traverse(file, context);
 
                 // Collect findings into thread context
                 for finding in findings {
