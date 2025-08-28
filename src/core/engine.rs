@@ -64,6 +64,9 @@ impl AnalysisEngine {
             crate::detectors::medium::DeprecatedChainlinkFunctionDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::medium::DeprecatedTransferDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::TxOriginUsageDetector::default(),
         ));
         self.register_detector(Arc::new(
