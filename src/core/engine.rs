@@ -78,6 +78,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::medium::UnsafeTransferFromDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::medium::UsdtAllowanceDetector::default(),
+        ));
 
         // Low severity detectors
         // not implemented

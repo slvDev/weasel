@@ -6,6 +6,7 @@ pub mod tx_origin_usage;
 pub mod unsafe_approve;
 pub mod unsafe_mint;
 pub mod unsafe_transferfrom;
+pub mod usdt_allowance;
 
 pub use block_number_l2::BlockNumberL2Detector;
 pub use centralization_risk::CentralizationRiskDetector;
@@ -15,3 +16,4 @@ pub use tx_origin_usage::TxOriginUsageDetector;
 pub use unsafe_approve::UnsafeApproveDetector;
 pub use unsafe_mint::UnsafeMintDetector;
 pub use unsafe_transferfrom::UnsafeTransferFromDetector;
+pub use usdt_allowance::UsdtAllowanceDetector;
