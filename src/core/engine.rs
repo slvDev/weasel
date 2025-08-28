@@ -57,6 +57,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::medium::TxOriginUsageDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::medium::UnsafeApproveDetector::default(),
+        ));
 
         // Low severity detectors
         // not implemented
