@@ -55,6 +55,9 @@ impl AnalysisEngine {
 
         // Medium severity detectors
         self.register_detector(Arc::new(
+            crate::detectors::medium::BlockNumberL2Detector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::TxOriginUsageDetector::default(),
         ));
         self.register_detector(Arc::new(
