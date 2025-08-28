@@ -61,6 +61,9 @@ impl AnalysisEngine {
             crate::detectors::medium::CentralizationRiskDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::medium::DeprecatedChainlinkFunctionDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::TxOriginUsageDetector::default(),
         ));
         self.register_detector(Arc::new(
