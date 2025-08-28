@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 pub mod gas;
 pub mod high;
+pub mod medium;
 pub mod nc;
 
 pub trait Detector: Send + Sync + 'static {

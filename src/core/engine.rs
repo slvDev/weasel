@@ -54,7 +54,9 @@ impl AnalysisEngine {
         ));
 
         // Medium severity detectors
-        // not implemented
+        self.register_detector(Arc::new(
+            crate::detectors::medium::TxOriginUsageDetector::default(),
+        ));
 
         // Low severity detectors
         // not implemented
