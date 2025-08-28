@@ -58,6 +58,9 @@ impl AnalysisEngine {
             crate::detectors::medium::BlockNumberL2Detector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::medium::CentralizationRiskDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::TxOriginUsageDetector::default(),
         ));
         self.register_detector(Arc::new(
