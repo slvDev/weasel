@@ -76,6 +76,9 @@ impl AnalysisEngine {
             crate::detectors::medium::FeeOnTransferDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::medium::L2SequencerCheckDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::LibraryFunctionVisibilityDetector::default(),
         ));
         self.register_detector(Arc::new(
