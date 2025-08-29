@@ -803,3 +803,19 @@ pub fn is_likely_nft(expr: &Expression) -> bool {
         _ => false,
     }
 }
+
+/// Check if an expression is a complex type based on AST structure (not name heuristics)
+pub fn is_complex_type_structure(expr: &Expression) -> bool {
+    match expr {
+        // Array access like arr[i] or mapping[key] - definitely complex
+        Expression::ArraySubscript(_, _, _) => true,
+        
+        // Multiple member accesses usually indicate struct field access
+        Expression::MemberAccess(_, base, _) => {
+            // Check for chained member access (e.g., order.user.name)
+            matches!(base.as_ref(), Expression::MemberAccess(_, _, _))
+        }
+        
+        _ => false,
+    }
+}
