@@ -70,6 +70,9 @@ impl AnalysisEngine {
             crate::detectors::medium::DeprecatedTransferDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::medium::DirectSupportsInterfaceDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::Eip712ComplianceDetector::default(),
         ));
         self.register_detector(Arc::new(
