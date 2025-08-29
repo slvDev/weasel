@@ -82,6 +82,9 @@ impl AnalysisEngine {
             crate::detectors::medium::SoladySafeTransferDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::medium::SolmateSafeTransferDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::TxOriginUsageDetector::default(),
         ));
         self.register_detector(Arc::new(
