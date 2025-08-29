@@ -705,3 +705,101 @@ pub fn get_function_visibility(func_def: &FunctionDefinition) -> Option<&Visibil
         }
     })
 }
+
+/// Check if an expression contains address(this) pattern
+pub fn contains_address_this(expr: &Expression) -> bool {
+    match expr {
+        Expression::FunctionCall(_, func, args) => {
+            // Check if this is address(this)
+            if let Expression::Variable(var) = func.as_ref() {
+                if var.name == "address" && args.len() == 1 {
+                    if let Expression::Variable(arg_var) = &args[0] {
+                        if arg_var.name == "this" {
+                            return true;
+                        }
+                    }
+                }
+            }
+            // Recursively check arguments
+            args.iter().any(|arg| contains_address_this(arg))
+        }
+        Expression::Variable(var) if var.name == "this" => true,
+        Expression::Parenthesis(_, inner) => contains_address_this(inner),
+        _ => false,
+    }
+}
+
+/// Heuristic check if an expression is likely an ERC20 token
+pub fn is_likely_erc20_token(expr: &Expression) -> bool {
+    match expr {
+        Expression::Variable(var) => {
+            let name_lower = var.name.to_lowercase();
+            // Common ERC20 token names and stablecoins
+            name_lower.contains("token") || 
+            name_lower.contains("erc20") || 
+            name_lower.contains("usdt") || 
+            name_lower.contains("usdc") ||
+            name_lower.contains("dai") ||
+            name_lower.contains("weth") ||
+            name_lower.contains("wbtc") ||
+            name_lower.contains("busd") ||
+            name_lower.contains("tusd") ||
+            name_lower.contains("coin")
+        }
+        Expression::FunctionCall(_, func, _) => {
+            // Check for ERC20/IERC20 interface casts
+            if let Expression::Variable(var) = func.as_ref() {
+                let name = &var.name;
+                name == "ERC20" || name == "IERC20" || 
+                name.contains("ERC20") || name.contains("IERC20")
+            } else {
+                false
+            }
+        }
+        Expression::MemberAccess(_, base, member) => {
+            let member_lower = member.name.to_lowercase();
+            // Check if member suggests token or recurse on base
+            (member_lower.contains("token") && !member_lower.contains("tokenid")) || 
+            member_lower.contains("coin") ||
+            is_likely_erc20_token(base)
+        }
+        Expression::ArraySubscript(_, base, _) => is_likely_erc20_token(base),
+        _ => false,
+    }
+}
+
+/// Heuristic check if an expression is likely an NFT (ERC721/ERC1155)
+pub fn is_likely_nft(expr: &Expression) -> bool {
+    match expr {
+        Expression::Variable(var) => {
+            let name_lower = var.name.to_lowercase();
+            // Common NFT-related names
+            name_lower.contains("nft") ||
+            name_lower.contains("erc721") ||
+            name_lower.contains("erc1155") ||
+            name_lower.contains("collectible") ||
+            name_lower.contains("nonfungible")
+        }
+        Expression::FunctionCall(_, func, _) => {
+            // Check for ERC721/ERC1155 interface casts
+            if let Expression::Variable(var) = func.as_ref() {
+                let name = &var.name;
+                name == "ERC721" || name == "IERC721" || 
+                name == "ERC1155" || name == "IERC1155" ||
+                name.contains("ERC721") || name.contains("IERC721") ||
+                name.contains("ERC1155") || name.contains("IERC1155")
+            } else {
+                false
+            }
+        }
+        Expression::MemberAccess(_, base, member) => {
+            let member_lower = member.name.to_lowercase();
+            // Check if member suggests NFT
+            member_lower.contains("nft") || 
+            member_lower.contains("collectible") ||
+            is_likely_nft(base)
+        }
+        Expression::ArraySubscript(_, base, _) => is_likely_nft(base),
+        _ => false,
+    }
+}
