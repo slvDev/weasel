@@ -1,5 +1,6 @@
 pub mod block_number_l2;
 pub mod centralization_risk;
+pub mod chainlink_stale_price;
 pub mod deprecated_chainlink_function;
 pub mod deprecated_transfer;
 pub mod eip712_compliance;
@@ -17,6 +18,7 @@ pub mod usdt_allowance;
 
 pub use block_number_l2::BlockNumberL2Detector;
 pub use centralization_risk::CentralizationRiskDetector;
+pub use chainlink_stale_price::ChainlinkStalePriceDetector;
 pub use deprecated_chainlink_function::DeprecatedChainlinkFunctionDetector;
 pub use deprecated_transfer::DeprecatedTransferDetector;
 pub use eip712_compliance::Eip712ComplianceDetector;
