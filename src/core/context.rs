@@ -407,7 +407,7 @@ impl AnalysisContext {
     }
 
     /// Get qualified name for a contract (tries to find it in loaded contracts)
-    fn get_qualified_name_for_contract(&self, contract_name: &str) -> String {
+    pub fn get_qualified_name_for_contract(&self, contract_name: &str) -> String {
         // First, check if it's already a qualified name
         if contract_name.contains(':') {
             return contract_name.to_string();
