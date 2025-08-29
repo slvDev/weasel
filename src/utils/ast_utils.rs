@@ -8,8 +8,9 @@ use crate::{
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{
-    ContractDefinition, ContractPart, Expression, Import, Loc, PragmaDirective, SourceUnit,
-    SourceUnitPart, Statement, Type, VariableDefinition, VersionComparator, VersionOp,
+    ContractDefinition, ContractPart, Expression, FunctionAttribute, FunctionDefinition, Import, 
+    Loc, Mutability, PragmaDirective, SourceUnit, SourceUnitPart, Statement, Type, 
+    VariableDefinition, VersionComparator, VersionOp, Visibility
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -674,5 +675,33 @@ pub fn extract_contract_info(
         inheritance_chain: Vec::new(), // Will be populated in second pass
         state_variables,
         function_definitions,
+    })
+}
+
+/// Check if a function has the virtual attribute
+pub fn is_function_virtual(func_def: &FunctionDefinition) -> bool {
+    func_def.attributes.iter().any(|attr| {
+        matches!(attr, FunctionAttribute::Virtual(_))
+    })
+}
+
+/// Check if a function is read-only (view or pure)
+pub fn is_function_readonly(func_def: &FunctionDefinition) -> bool {
+    func_def.attributes.iter().any(|attr| {
+        matches!(attr, 
+            FunctionAttribute::Mutability(Mutability::View(_)) | 
+            FunctionAttribute::Mutability(Mutability::Pure(_))
+        )
+    })
+}
+
+/// Get the visibility of a function (if specified)
+pub fn get_function_visibility(func_def: &FunctionDefinition) -> Option<&Visibility> {
+    func_def.attributes.iter().find_map(|attr| {
+        if let FunctionAttribute::Visibility(vis) = attr {
+            Some(vis)
+        } else {
+            None
+        }
     })
 }

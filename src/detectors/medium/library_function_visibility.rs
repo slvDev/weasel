@@ -1,8 +1,8 @@
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::utils::location::loc_to_location;
+use crate::utils::{ast_utils, location::loc_to_location};
 use crate::{core::visitor::ASTVisitor, models::FindingData};
-use solang_parser::pt::{ContractPart, ContractTy, FunctionAttribute, FunctionTy, Visibility};
+use solang_parser::pt::{ContractPart, ContractTy, FunctionTy, Visibility};
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
@@ -65,21 +65,12 @@ library MyLib {
                     }
                     
                     // Check for virtual functions
-                    let is_virtual = func_def.attributes.iter().any(|attr| {
-                        matches!(attr, FunctionAttribute::Virtual(_))
-                    });
-                    if is_virtual {
+                    if ast_utils::is_function_virtual(func_def) {
                         continue;
                     }
 
                     // Check visibility
-                    let visibility = func_def.attributes.iter().find_map(|attr| {
-                        if let FunctionAttribute::Visibility(vis) = attr {
-                            Some(vis)
-                        } else {
-                            None
-                        }
-                    });
+                    let visibility = ast_utils::get_function_visibility(func_def);
 
                     // If no visibility specified, default is internal for libraries (which is fine)
                     if let Some(vis) = visibility {
