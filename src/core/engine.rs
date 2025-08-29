@@ -97,6 +97,9 @@ impl AnalysisEngine {
             crate::detectors::medium::UnboundedFeeDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::medium::UncheckedTransferDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::UnsafeApproveDetector::default(),
         ));
         self.register_detector(Arc::new(
