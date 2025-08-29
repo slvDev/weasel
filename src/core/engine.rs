@@ -103,6 +103,9 @@ impl AnalysisEngine {
             crate::detectors::medium::UnsafeApproveDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::medium::UnsafeErc20OperationsDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::UnsafeMintDetector::default(),
         ));
         self.register_detector(Arc::new(
