@@ -129,6 +129,9 @@ impl AnalysisEngine {
             crate::detectors::gas::BooleanComparisonDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::CompoundAssignmentDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::MsgSenderUsageDetector::default(),
         ));
         self.register_detector(Arc::new(
