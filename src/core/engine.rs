@@ -67,6 +67,9 @@ impl AnalysisEngine {
             crate::detectors::medium::DeprecatedTransferDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::medium::FeeOnTransferDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::medium::LibraryFunctionVisibilityDetector::default(),
         ));
         self.register_detector(Arc::new(
