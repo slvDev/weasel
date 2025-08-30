@@ -123,6 +123,9 @@ impl AnalysisEngine {
 
         // Gas detectors
         self.register_detector(Arc::new(
+            crate::detectors::gas::AddressZeroCheckDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::ArrayLengthInLoopDetector::default(),
         ));
         self.register_detector(Arc::new(
