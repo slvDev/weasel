@@ -143,6 +143,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::gas::UnsafeArrayAccessDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::gas::BoolStorageDetector::default(),
+        ));
 
         // NC detectors
         self.register_detector(Arc::new(
