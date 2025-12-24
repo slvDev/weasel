@@ -5,14 +5,15 @@ use crate::{
         finding::{FindingData, Location},
         ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter,
         ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StructField, StructInfo,
+        TypeDefinitionInfo, UsingDirectiveInfo,
     },
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{
     ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition, EventDefinition, Expression,
     FunctionAttribute, FunctionDefinition, FunctionTy, Import, Loc, Mutability, PragmaDirective,
-    SourceUnit, SourceUnitPart, Statement, StructDefinition, Type, VariableDefinition,
-    VersionComparator, VersionOp, Visibility,
+    SourceUnit, SourceUnitPart, Statement, StructDefinition, Type, TypeDefinition, Using,
+    UsingList, VariableDefinition, VersionComparator, VersionOp, Visibility,
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -838,6 +839,74 @@ pub fn extract_contract_modifiers(contract_def: &ContractDefinition) -> Vec<Modi
         .collect()
 }
 
+/// Extract type definition information from a type definition
+pub fn extract_type_definition_info(type_def: &TypeDefinition) -> TypeDefinitionInfo {
+    let name = type_def.name.name.clone();
+    let underlying_type = extract_type_name(&type_def.ty);
+
+    TypeDefinitionInfo {
+        name,
+        underlying_type,
+    }
+}
+
+/// Extract type definitions from a contract definition
+pub fn extract_contract_type_definitions(contract_def: &ContractDefinition) -> Vec<TypeDefinitionInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::TypeDefinition(type_def) = part {
+                Some(extract_type_definition_info(type_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract using directive information from a using directive
+pub fn extract_using_directive_info(using: &Using) -> UsingDirectiveInfo {
+    let mut library_name = None;
+    let mut functions = Vec::new();
+
+    match &using.list {
+        UsingList::Library(ident_path) => {
+            library_name = ident_path.identifiers.last().map(|id| id.name.clone());
+        }
+        UsingList::Functions(func_list) => {
+            functions = func_list
+                .iter()
+                .filter_map(|item| item.path.identifiers.last().map(|id| id.name.clone()))
+                .collect();
+        }
+        _ => {}
+    }
+
+    let target_type = using.ty.as_ref().map(|ty| extract_type_name(ty));
+
+    UsingDirectiveInfo {
+        library_name,
+        functions,
+        target_type,
+    }
+}
+
+/// Extract using directives from a contract definition
+pub fn extract_contract_using_directives(contract_def: &ContractDefinition) -> Vec<UsingDirectiveInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::Using(using) = part {
+                Some(extract_using_directive_info(using))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Extract information from a single contract definition
 pub fn extract_contract_info(
     contract_def: &ContractDefinition,
@@ -896,6 +965,12 @@ pub fn extract_contract_info(
     // Extract modifiers
     let modifiers = extract_contract_modifiers(contract_def);
 
+    // Extract type definitions
+    let type_definitions = extract_contract_type_definitions(contract_def);
+
+    // Extract using directives
+    let using_directives = extract_contract_using_directives(contract_def);
+
     Ok(ContractInfo {
         name: name.name.clone(),
         contract_type,
@@ -909,6 +984,8 @@ pub fn extract_contract_info(
         events,
         structs,
         modifiers,
+        type_definitions,
+        using_directives,
     })
 }
 

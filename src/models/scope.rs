@@ -4,7 +4,8 @@ use std::path::PathBuf;
 
 use crate::utils::ast_utils::{
     extract_contract_info, extract_enum_info, extract_error_info, extract_event_info,
-    extract_solidity_version_from_pragma, extract_struct_info, process_import_directive,
+    extract_solidity_version_from_pragma, extract_struct_info, extract_type_definition_info,
+    extract_using_directive_info, process_import_directive,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,6 +26,8 @@ pub struct SolidityFile {
     pub errors: Vec<ErrorInfo>,
     pub events: Vec<EventInfo>,
     pub structs: Vec<StructInfo>,
+    pub type_definitions: Vec<TypeDefinitionInfo>,
+    pub using_directives: Vec<UsingDirectiveInfo>,
 
     #[serde(skip)]
     pub source_unit: SourceUnit,
@@ -52,6 +55,8 @@ impl SolidityFile {
             errors: Vec::new(),
             events: Vec::new(),
             structs: Vec::new(),
+            type_definitions: Vec::new(),
+            using_directives: Vec::new(),
             line_starts,
         }
     }
@@ -89,6 +94,14 @@ impl SolidityFile {
                 SourceUnitPart::StructDefinition(struct_def) => {
                     let struct_info = extract_struct_info(struct_def);
                     self.structs.push(struct_info);
+                }
+                SourceUnitPart::TypeDefinition(type_def) => {
+                    let type_info = extract_type_definition_info(type_def);
+                    self.type_definitions.push(type_info);
+                }
+                SourceUnitPart::Using(using) => {
+                    let using_info = extract_using_directive_info(using);
+                    self.using_directives.push(using_info);
                 }
                 _ => {}
             }
@@ -130,6 +143,8 @@ pub struct ContractInfo {
     pub events: Vec<EventInfo>,
     pub structs: Vec<StructInfo>,
     pub modifiers: Vec<ModifierInfo>,
+    pub type_definitions: Vec<TypeDefinitionInfo>,
+    pub using_directives: Vec<UsingDirectiveInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -193,6 +208,19 @@ pub struct ModifierInfo {
 pub struct ModifierParameter {
     pub name: Option<String>,
     pub type_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TypeDefinitionInfo {
+    pub name: String,
+    pub underlying_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UsingDirectiveInfo {
+    pub library_name: Option<String>,
+    pub functions: Vec<String>,
+    pub target_type: Option<String>,
 }
 
 pub type ScopeFiles = Vec<SolidityFile>;
