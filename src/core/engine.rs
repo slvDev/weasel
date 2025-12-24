@@ -158,6 +158,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::gas::CacheStateVariablesDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::gas::AvoidContractExistenceChecksDetector::default(),
+        ));
 
         // NC detectors
         self.register_detector(Arc::new(
