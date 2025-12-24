@@ -170,6 +170,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::gas::DefaultValueInitializationDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::gas::LongRevertStringDetector::default(),
+        ));
 
         // NC detectors
         self.register_detector(Arc::new(
