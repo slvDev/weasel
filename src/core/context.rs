@@ -517,7 +517,7 @@ impl AnalysisContext {
             contract_info
                 .function_definitions
                 .iter()
-                .any(|f| f == function_name)
+                .any(|f| f.name == function_name)
         } else {
             false
         }

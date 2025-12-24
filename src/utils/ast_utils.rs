@@ -4,6 +4,7 @@ use crate::{
     models::{
         finding::{FindingData, Location},
         ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter,
+        FunctionInfo, FunctionMutability, FunctionParameter, FunctionType, FunctionVisibility,
         ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StateVariableInfo, StructField,
         StructInfo, TypeDefinitionInfo, UsingDirectiveInfo, VariableMutability, VariableVisibility,
     },
@@ -962,6 +963,114 @@ pub fn extract_contract_using_directives(contract_def: &ContractDefinition) -> V
         .collect()
 }
 
+/// Extract function information from a function definition
+pub fn extract_function_info(func_def: &FunctionDefinition) -> FunctionInfo {
+    // Extract function name
+    let name = func_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    // Determine function type
+    let function_type = match func_def.ty {
+        FunctionTy::Constructor => FunctionType::Constructor,
+        FunctionTy::Fallback => FunctionType::Fallback,
+        FunctionTy::Receive => FunctionType::Receive,
+        FunctionTy::Function | FunctionTy::Modifier => FunctionType::Function,
+    };
+
+    // Extract parameters
+    let parameters: Vec<FunctionParameter> = func_def
+        .params
+        .iter()
+        .filter_map(|(_, param_opt)| {
+            param_opt.as_ref().map(|param| FunctionParameter {
+                name: param.name.as_ref().map(|id| id.name.clone()),
+                type_name: extract_type_name(&param.ty),
+            })
+        })
+        .collect();
+
+    // Extract return parameters
+    let return_parameters: Vec<FunctionParameter> = func_def
+        .returns
+        .iter()
+        .filter_map(|(_, param_opt)| {
+            param_opt.as_ref().map(|param| FunctionParameter {
+                name: param.name.as_ref().map(|id| id.name.clone()),
+                type_name: extract_type_name(&param.ty),
+            })
+        })
+        .collect();
+
+    // Extract visibility from attributes
+    let visibility = func_def
+        .attributes
+        .iter()
+        .find_map(|attr| match attr {
+            FunctionAttribute::Visibility(vis) => Some(match vis {
+                Visibility::Public(_) => FunctionVisibility::Public,
+                Visibility::Private(_) => FunctionVisibility::Private,
+                Visibility::Internal(_) => FunctionVisibility::Internal,
+                Visibility::External(_) => FunctionVisibility::External,
+            }),
+            _ => None,
+        })
+        .unwrap_or(FunctionVisibility::Internal); // Default visibility
+
+    // Extract mutability from attributes
+    let mutability = func_def
+        .attributes
+        .iter()
+        .find_map(|attr| match attr {
+            FunctionAttribute::Mutability(m) => Some(match m {
+                Mutability::Pure(_) => FunctionMutability::Pure,
+                Mutability::View(_) => FunctionMutability::View,
+                Mutability::Payable(_) => FunctionMutability::Payable,
+                Mutability::Constant(_) => FunctionMutability::View, // Constant is deprecated, treat as view
+            }),
+            _ => None,
+        })
+        .unwrap_or(FunctionMutability::Nonpayable); // Default mutability
+
+    // Extract modifiers applied to this function
+    let modifiers: Vec<String> = func_def
+        .attributes
+        .iter()
+        .filter_map(|attr| {
+            if let FunctionAttribute::BaseOrModifier(_, base) = attr {
+                base.name.identifiers.last().map(|id| id.name.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Check for virtual and override flags
+    let is_virtual = func_def
+        .attributes
+        .iter()
+        .any(|attr| matches!(attr, FunctionAttribute::Virtual(_)));
+
+    let is_override = func_def
+        .attributes
+        .iter()
+        .any(|attr| matches!(attr, FunctionAttribute::Override(_, _)));
+
+    FunctionInfo {
+        name,
+        parameters,
+        return_parameters,
+        visibility,
+        mutability,
+        function_type,
+        modifiers,
+        is_virtual,
+        is_override,
+    }
+}
+
 /// Extract information from a single contract definition
 pub fn extract_contract_info(
     contract_def: &ContractDefinition,
@@ -992,13 +1101,18 @@ pub fn extract_contract_info(
     // Extract state variables
     let state_variables = extract_state_variables(contract_def);
 
-    // Extract function definitions
+    // Extract function definitions (exclude modifiers as they are extracted separately)
     let function_definitions = contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::FunctionDefinition(func_def) = part {
-                func_def.name.as_ref().map(|n| n.name.clone())
+                // Skip modifiers - they are extracted separately
+                if !matches!(func_def.ty, FunctionTy::Modifier) {
+                    Some(extract_function_info(func_def))
+                } else {
+                    None
+                }
             } else {
                 None
             }

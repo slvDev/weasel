@@ -60,8 +60,8 @@ contract MyNFT {
                 let qualified_name = context.get_qualified_name_for_contract(contract_name);
                 
                 if let Some(contract_info) = context.get_contract(&qualified_name) {
-                    let has_mint = contract_info.function_definitions.contains(&"_mint".to_string());
-                    let has_safemint = contract_info.function_definitions.contains(&"_safeMint".to_string());
+                    let has_mint = contract_info.function_definitions.iter().any(|f| f.name == "_mint");
+                    let has_safemint = contract_info.function_definitions.iter().any(|f| f.name == "_safeMint");
                     
                     // Check if only one exists (asymmetry)
                     if has_mint != has_safemint {

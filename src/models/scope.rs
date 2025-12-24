@@ -4,8 +4,9 @@ use std::path::PathBuf;
 
 use crate::utils::ast_utils::{
     extract_contract_info, extract_enum_info, extract_error_info, extract_event_info,
-    extract_solidity_version_from_pragma, extract_struct_info, extract_type_definition_info,
-    extract_using_directive_info, extract_variable_info, process_import_directive,
+    extract_function_info, extract_solidity_version_from_pragma, extract_struct_info,
+    extract_type_definition_info, extract_using_directive_info, extract_variable_info,
+    process_import_directive,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +30,7 @@ pub struct SolidityFile {
     pub type_definitions: Vec<TypeDefinitionInfo>,
     pub using_directives: Vec<UsingDirectiveInfo>,
     pub variables: Vec<StateVariableInfo>,
+    pub functions: Vec<FunctionInfo>,
 
     #[serde(skip)]
     pub source_unit: SourceUnit,
@@ -59,6 +61,7 @@ impl SolidityFile {
             type_definitions: Vec::new(),
             using_directives: Vec::new(),
             variables: Vec::new(),
+            functions: Vec::new(),
             line_starts,
         }
     }
@@ -109,6 +112,10 @@ impl SolidityFile {
                     let var_info = extract_variable_info(var_def);
                     self.variables.push(var_info);
                 }
+                SourceUnitPart::FunctionDefinition(func_def) => {
+                    let func_info = extract_function_info(func_def);
+                    self.functions.push(func_info);
+                }
                 _ => {}
             }
         }
@@ -143,7 +150,7 @@ pub struct ContractInfo {
     pub direct_bases: Vec<String>,
     pub inheritance_chain: Vec<String>,
     pub state_variables: Vec<StateVariableInfo>,
-    pub function_definitions: Vec<String>,
+    pub function_definitions: Vec<FunctionInfo>,
     pub enums: Vec<EnumInfo>,
     pub errors: Vec<ErrorInfo>,
     pub events: Vec<EventInfo>,
@@ -252,6 +259,49 @@ pub enum VariableMutability {
     Mutable,
     Constant,
     Immutable,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FunctionInfo {
+    pub name: String,
+    pub parameters: Vec<FunctionParameter>,
+    pub return_parameters: Vec<FunctionParameter>,
+    pub visibility: FunctionVisibility,
+    pub mutability: FunctionMutability,
+    pub function_type: FunctionType,
+    pub modifiers: Vec<String>,
+    pub is_virtual: bool,
+    pub is_override: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FunctionParameter {
+    pub name: Option<String>,
+    pub type_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum FunctionVisibility {
+    Public,
+    Private,
+    Internal,
+    External,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum FunctionMutability {
+    Pure,
+    View,
+    Payable,
+    Nonpayable,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum FunctionType {
+    Function,
+    Constructor,
+    Fallback,
+    Receive,
 }
 
 pub type ScopeFiles = Vec<SolidityFile>;
