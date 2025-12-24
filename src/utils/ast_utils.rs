@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 
 use crate::{
@@ -482,6 +483,83 @@ fn get_expression_location(expr: &Expression) -> Option<Loc> {
         | Expression::FunctionCall(loc, _, _) => Some(loc.clone()),
         Expression::Variable(ident) => Some(ident.loc.clone()),
         _ => None,
+    }
+}
+
+/// Find all uses of a variable by name in a statement, returning their locations
+pub fn find_variable_uses(var_name: &str, body: &Statement, file: &SolidityFile) -> Vec<Location> {
+    let mut occurrences = Vec::new();
+    let mut predicate = |expr: &Expression, _: &SolidityFile| -> Option<Loc> {
+        if let Expression::Variable(ident) = expr {
+            if ident.name == var_name {
+                return Some(ident.loc);
+            }
+        }
+        None
+    };
+    find_locations_in_statement(body, file, &mut predicate, &mut occurrences);
+    occurrences
+}
+
+/// Get all local variable names in a function (parameters + return params + declarations)
+pub fn get_local_variable_names(func_def: &FunctionDefinition, body: &Statement) -> HashSet<String> {
+    let mut local_vars = HashSet::new();
+
+    // Add function parameters
+    for (_, param_opt) in &func_def.params {
+        if let Some(param) = param_opt {
+            if let Some(name) = &param.name {
+                local_vars.insert(name.name.clone());
+            }
+        }
+    }
+
+    // Add return parameters (can be used as local variables)
+    for (_, param_opt) in &func_def.returns {
+        if let Some(param) = param_opt {
+            if let Some(name) = &param.name {
+                local_vars.insert(name.name.clone());
+            }
+        }
+    }
+
+    // Add local variable declarations from body
+    collect_local_declarations(body, &mut local_vars);
+
+    local_vars
+}
+
+/// Recursively collect local variable declaration names from a statement
+pub fn collect_local_declarations(stmt: &Statement, local_vars: &mut HashSet<String>) {
+    match stmt {
+        Statement::VariableDefinition(_, decl, _) => {
+            if let Some(name) = &decl.name {
+                local_vars.insert(name.name.clone());
+            }
+        }
+        Statement::Block { statements, .. } => {
+            for s in statements {
+                collect_local_declarations(s, local_vars);
+            }
+        }
+        Statement::If(_, _, then_stmt, else_stmt) => {
+            collect_local_declarations(then_stmt, local_vars);
+            if let Some(else_s) = else_stmt {
+                collect_local_declarations(else_s, local_vars);
+            }
+        }
+        Statement::For(_, init, _, _, body_opt) => {
+            if let Some(init_stmt) = init {
+                collect_local_declarations(init_stmt, local_vars);
+            }
+            if let Some(body) = body_opt {
+                collect_local_declarations(body, local_vars);
+            }
+        }
+        Statement::While(_, _, body) | Statement::DoWhile(_, body, _) => {
+            collect_local_declarations(body, local_vars);
+        }
+        _ => {}
     }
 }
 

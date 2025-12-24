@@ -1,10 +1,9 @@
 use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::models::{FindingData, SolidityFile};
-use crate::utils::ast_utils::find_locations_in_statement;
-use solang_parser::pt::{ContractPart, Expression, FunctionDefinition, Loc, Statement};
-use std::collections::HashSet;
+use crate::models::FindingData;
+use crate::utils::ast_utils::{find_variable_uses, get_local_variable_names};
+use solang_parser::pt::ContractPart;
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
@@ -70,7 +69,7 @@ function good() external view returns (uint256) {
             for part in &contract_def.parts {
                 if let ContractPart::FunctionDefinition(func_def) = part {
                     if let Some(body) = &func_def.body {
-                        let local_vars = Self::get_local_vars(func_def, body);
+                        let local_vars = get_local_variable_names(func_def, body);
 
                         for state_var in &state_vars {
                             // Skip if shadowed by local variable
@@ -78,25 +77,7 @@ function good() external view returns (uint256) {
                                 continue;
                             }
 
-                            let var_name = state_var.name.as_str();
-                            let mut occurrences = Vec::new();
-
-                            let mut predicate =
-                                |expr: &Expression, _: &SolidityFile| -> Option<Loc> {
-                                    if let Expression::Variable(ident) = expr {
-                                        if ident.name == var_name {
-                                            return Some(ident.loc);
-                                        }
-                                    }
-                                    None
-                                };
-
-                            find_locations_in_statement(
-                                body,
-                                file,
-                                &mut predicate,
-                                &mut occurrences,
-                            );
+                            let occurrences = find_variable_uses(&state_var.name, body, file);
 
                             // Report 2nd+ occurrences
                             if occurrences.len() > 1 {
@@ -114,59 +95,6 @@ function good() external view returns (uint256) {
 
             findings
         });
-    }
-}
-
-impl CacheStateVariablesDetector {
-    fn get_local_vars(func_def: &FunctionDefinition, body: &Statement) -> HashSet<String> {
-        let mut local_vars = HashSet::new();
-
-        // Add function parameters
-        for (_, param_opt) in &func_def.params {
-            if let Some(param) = param_opt {
-                if let Some(name) = &param.name {
-                    local_vars.insert(name.name.clone());
-                }
-            }
-        }
-
-        // Add local variable declarations
-        Self::collect_local_declarations(body, &mut local_vars);
-
-        local_vars
-    }
-
-    fn collect_local_declarations(stmt: &Statement, local_vars: &mut HashSet<String>) {
-        match stmt {
-            Statement::VariableDefinition(_, decl, _) => {
-                if let Some(name) = &decl.name {
-                    local_vars.insert(name.name.clone());
-                }
-            }
-            Statement::Block { statements, .. } => {
-                for s in statements {
-                    Self::collect_local_declarations(s, local_vars);
-                }
-            }
-            Statement::If(_, _, then_stmt, else_stmt) => {
-                Self::collect_local_declarations(then_stmt, local_vars);
-                if let Some(else_s) = else_stmt {
-                    Self::collect_local_declarations(else_s, local_vars);
-                }
-            }
-            Statement::For(_, init, _, _, body_opt) => {
-                if let Some(init_stmt) = init {
-                    Self::collect_local_declarations(init_stmt, local_vars);
-                }
-                if let Some(body) = body_opt {
-                    Self::collect_local_declarations(body, local_vars);
-                }
-            }
-            Statement::While(_, _, body) | Statement::DoWhile(_, body, _) => {
-                Self::collect_local_declarations(body, local_vars);
-            }
-            _ => {}
-        }
     }
 }
 

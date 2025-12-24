@@ -10,6 +10,7 @@ pub mod compound_assignment;
 pub mod custom_errors_instead_of_revert_strings;
 pub mod msg_sender_usage;
 pub mod unchecked_loop_increment;
+pub mod unnecessary_variable_cache;
 pub mod unsafe_array_access;
 
 pub use address_zero_check::AddressZeroCheckDetector;
@@ -24,4 +25,5 @@ pub use compound_assignment::CompoundAssignmentDetector;
 pub use custom_errors_instead_of_revert_strings::CustomErrorsInsteadOfRevertStringsDetector;
 pub use msg_sender_usage::MsgSenderUsageDetector;
 pub use unchecked_loop_increment::UncheckedLoopIncrementDetector;
+pub use unnecessary_variable_cache::UnnecessaryVariableCacheDetector;
 pub use unsafe_array_access::UnsafeArrayAccessDetector;
