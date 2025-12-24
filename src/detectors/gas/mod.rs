@@ -6,6 +6,7 @@ pub mod boolean_comparison;
 pub mod calldata_instead_of_memory;
 pub mod compound_assignment;
 pub mod msg_sender_usage;
+pub mod unchecked_loop_increment;
 pub mod unsafe_array_access;
 
 pub use address_zero_check::AddressZeroCheckDetector;
@@ -16,4 +17,5 @@ pub use boolean_comparison::BooleanComparisonDetector;
 pub use calldata_instead_of_memory::CalldataInsteadOfMemoryDetector;
 pub use compound_assignment::CompoundAssignmentDetector;
 pub use msg_sender_usage::MsgSenderUsageDetector;
+pub use unchecked_loop_increment::UncheckedLoopIncrementDetector;
 pub use unsafe_array_access::UnsafeArrayAccessDetector;

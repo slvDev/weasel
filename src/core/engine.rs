@@ -149,6 +149,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::gas::CalldataInsteadOfMemoryDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::gas::UncheckedLoopIncrementDetector::default(),
+        ));
 
         // NC detectors
         self.register_detector(Arc::new(
