@@ -3,14 +3,15 @@ use std::path::Path;
 use crate::{
     models::{
         finding::{FindingData, Location},
-        ContractInfo, ContractType, EnumInfo, ImportInfo, SolidityFile,
+        ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter,
+        ImportInfo, SolidityFile,
     },
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{
-    ContractDefinition, ContractPart, EnumDefinition, Expression, FunctionAttribute,
-    FunctionDefinition, Import, Loc, Mutability, PragmaDirective, SourceUnit, SourceUnitPart,
-    Statement, Type, VariableDefinition, VersionComparator, VersionOp, Visibility,
+    ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition, EventDefinition, Expression,
+    FunctionAttribute, FunctionDefinition, Import, Loc, Mutability, PragmaDirective, SourceUnit,
+    SourceUnitPart, Statement, Type, VariableDefinition, VersionComparator, VersionOp, Visibility,
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -656,6 +657,110 @@ pub fn extract_contract_enums(contract_def: &ContractDefinition) -> Vec<EnumInfo
         .collect()
 }
 
+/// Helper to extract type name from Expression
+fn extract_type_name(type_expr: &Expression) -> String {
+    match type_expr {
+        Expression::Variable(ident) => ident.name.clone(),
+        Expression::Type(_, ty) => format!("{:?}", ty),
+        Expression::ArraySubscript(_, base, size) => {
+            let base_type = extract_type_name(base);
+            if let Some(size_expr) = size {
+                format!("{}[{}]", base_type, extract_simple_expr(size_expr))
+            } else {
+                format!("{}[]", base_type)
+            }
+        }
+        Expression::MemberAccess(_, obj, member) => {
+            format!("{}.{}", extract_type_name(obj), member.name)
+        }
+        _ => "unknown".to_string(),
+    }
+}
+
+/// Helper to extract simple expression value (for array sizes, etc.)
+fn extract_simple_expr(expr: &Expression) -> String {
+    match expr {
+        Expression::NumberLiteral(_, val, _, _) => val.clone(),
+        Expression::Variable(ident) => ident.name.clone(),
+        _ => String::new(),
+    }
+}
+
+/// Extract error information from an error definition
+pub fn extract_error_info(error_def: &ErrorDefinition) -> ErrorInfo {
+    let name = error_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let parameters = error_def
+        .fields
+        .iter()
+        .map(|param| ErrorParameter {
+            name: param.name.as_ref().map(|id| id.name.clone()),
+            type_name: extract_type_name(&param.ty),
+        })
+        .collect();
+
+    ErrorInfo { name, parameters }
+}
+
+/// Extract errors from a contract definition
+pub fn extract_contract_errors(contract_def: &ContractDefinition) -> Vec<ErrorInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::ErrorDefinition(error_def) = part {
+                Some(extract_error_info(error_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract event information from an event definition
+pub fn extract_event_info(event_def: &EventDefinition) -> EventInfo {
+    let name = event_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let parameters = event_def
+        .fields
+        .iter()
+        .map(|param| EventParameter {
+            name: param.name.as_ref().map(|id| id.name.clone()),
+            type_name: extract_type_name(&param.ty),
+            indexed: param.indexed,
+        })
+        .collect();
+
+    EventInfo {
+        name,
+        parameters,
+        anonymous: event_def.anonymous,
+    }
+}
+
+/// Extract events from a contract definition
+pub fn extract_contract_events(contract_def: &ContractDefinition) -> Vec<EventInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::EventDefinition(event_def) = part {
+                Some(extract_event_info(event_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Extract information from a single contract definition
 pub fn extract_contract_info(
     contract_def: &ContractDefinition,
@@ -702,6 +807,12 @@ pub fn extract_contract_info(
     // Extract enums
     let enums = extract_contract_enums(contract_def);
 
+    // Extract errors
+    let errors = extract_contract_errors(contract_def);
+
+    // Extract events
+    let events = extract_contract_events(contract_def);
+
     Ok(ContractInfo {
         name: name.name.clone(),
         contract_type,
@@ -711,6 +822,8 @@ pub fn extract_contract_info(
         state_variables,
         function_definitions,
         enums,
+        errors,
+        events,
     })
 }
 

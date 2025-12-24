@@ -3,8 +3,8 @@ use solang_parser::pt::{ContractTy, SourceUnit, SourceUnitPart};
 use std::path::PathBuf;
 
 use crate::utils::ast_utils::{
-    extract_contract_info, extract_enum_info, extract_solidity_version_from_pragma,
-    process_import_directive,
+    extract_contract_info, extract_enum_info, extract_error_info, extract_event_info,
+    extract_solidity_version_from_pragma, process_import_directive,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,6 +22,8 @@ pub struct SolidityFile {
     pub imports: Vec<ImportInfo>,
     pub contract_definitions: Vec<ContractInfo>,
     pub enums: Vec<EnumInfo>,
+    pub errors: Vec<ErrorInfo>,
+    pub events: Vec<EventInfo>,
 
     #[serde(skip)]
     pub source_unit: SourceUnit,
@@ -46,6 +48,8 @@ impl SolidityFile {
             contract_definitions: Vec::new(),
             imports: Vec::new(),
             enums: Vec::new(),
+            errors: Vec::new(),
+            events: Vec::new(),
             line_starts,
         }
     }
@@ -71,6 +75,14 @@ impl SolidityFile {
                 SourceUnitPart::EnumDefinition(enum_def) => {
                     let enum_info = extract_enum_info(enum_def);
                     self.enums.push(enum_info);
+                }
+                SourceUnitPart::ErrorDefinition(error_def) => {
+                    let error_info = extract_error_info(error_def);
+                    self.errors.push(error_info);
+                }
+                SourceUnitPart::EventDefinition(event_def) => {
+                    let event_info = extract_event_info(event_def);
+                    self.events.push(event_info);
                 }
                 _ => {}
             }
@@ -108,6 +120,8 @@ pub struct ContractInfo {
     pub state_variables: Vec<String>,
     pub function_definitions: Vec<String>,
     pub enums: Vec<EnumInfo>,
+    pub errors: Vec<ErrorInfo>,
+    pub events: Vec<EventInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,6 +135,32 @@ pub struct ImportInfo {
 pub struct EnumInfo {
     pub name: String,
     pub values: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ErrorInfo {
+    pub name: String,
+    pub parameters: Vec<ErrorParameter>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ErrorParameter {
+    pub name: Option<String>,
+    pub type_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EventInfo {
+    pub name: String,
+    pub parameters: Vec<EventParameter>,
+    pub anonymous: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EventParameter {
+    pub name: Option<String>,
+    pub type_name: String,
+    pub indexed: bool,
 }
 
 pub type ScopeFiles = Vec<SolidityFile>;
