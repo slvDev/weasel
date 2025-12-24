@@ -1,6 +1,9 @@
 use crate::core::c3_linearization::c3_linearize;
 use crate::core::import_resolver::ImportResolver;
-use crate::models::{ContractInfo, ScopeFiles, SolidityFile};
+use crate::models::{
+    ContractInfo, EnumInfo, ErrorInfo, EventInfo, FunctionInfo, ModifierInfo, ScopeFiles,
+    SolidityFile, StateVariableInfo, StructInfo, TypeDefinitionInfo, UsingDirectiveInfo,
+};
 use solang_parser::parse;
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -108,9 +111,8 @@ impl AnalysisContext {
         Ok(())
     }
 
-    /// Builds cache tables after all files are loaded
+    /// Builds cache tables after all files are loaded.
     pub fn build_cache(&mut self) -> Result<(), String> {
-        // First pass: Register all contracts from files to cache
         let contracts_to_register: Vec<_> = self
             .files
             .iter()
@@ -118,19 +120,14 @@ impl AnalysisContext {
             .collect();
 
         for contract in contracts_to_register {
-            let qualified_name = format!("{}:{}", contract.file_path, contract.name);
             self.register_contract(contract);
         }
 
-        // Second pass: Resolve inheritance
         self.resolve_inheritance()?;
-
         Ok(())
     }
 
-    /// Second pass: Resolve inheritance
     fn resolve_inheritance(&mut self) -> Result<(), String> {
-        // First, resolve inheritance for contracts already in the cache
         let mut visited = HashSet::new();
         let mut temp_visited = HashSet::new();
         let initial_contract_names: Vec<String> = self.contracts.keys().cloned().collect();
@@ -141,20 +138,13 @@ impl AnalysisContext {
             }
         }
 
-        // Now, check if we need to load any missing contracts from imported files
         let missing_contracts: Vec<String> = self.missing_contracts.iter().cloned().collect();
 
         for missing_contract in missing_contracts {
-            // Try to find the contract in imported files
-            // Note: We don't have specific file context here, so pass None
             if let Some(contract_info) = self.find_contract_in_imports(&missing_contract, None)? {
-                // Add the found contract to our cache
                 self.register_contract(contract_info);
-
-                // Remove from missing contracts set
                 self.missing_contracts.remove(&missing_contract);
 
-                // Resolve inheritance for the newly added contract
                 let qualified_name = self.get_qualified_name_for_contract(&missing_contract);
                 if !visited.contains(&qualified_name) {
                     self.resolve_contract_inheritance(
@@ -169,8 +159,7 @@ impl AnalysisContext {
         Ok(())
     }
 
-    /// Recursively resolve inheritance for a single contract
-    /// Builds inheritance chain following Solidity's linearization order (most derived to base)
+    /// Builds inheritance chain using C3 linearization.
     fn resolve_contract_inheritance(
         &mut self,
         contract_name: &str,
@@ -190,17 +179,14 @@ impl AnalysisContext {
 
         temp_visited.insert(contract_name.to_string());
 
-        // Get direct bases for this contract
         let direct_bases = if let Some(contract) = self.contracts.get(contract_name) {
             contract.direct_bases.clone()
         } else {
             Vec::new()
         };
 
-        // First, ensure all base contracts are resolved
         let mut qualified_bases = Vec::new();
 
-        // Extract the file path from the qualified contract name
         let current_file_path = if contract_name.contains(':') {
             let parts: Vec<&str> = contract_name.split(':').collect();
             Some(PathBuf::from(parts[0]))
@@ -212,47 +198,33 @@ impl AnalysisContext {
             let qualified_base_name = self.get_qualified_name_for_contract(base_name);
 
             if self.contracts.contains_key(&qualified_base_name) {
-                // Recursively resolve base contract first
                 self.resolve_contract_inheritance(&qualified_base_name, visited, temp_visited)?;
                 qualified_bases.push(qualified_base_name);
-            } else {
-                // Base contract not found - try dynamic loading via imports
+            } else if let Some(ref file_path) = current_file_path {
+                if let Some(contract_info) =
+                    self.find_contract_in_imports(base_name, Some(&file_path))?
+                {
+                    self.register_contract(contract_info);
 
-                // Try to find and load the contract from imports
-                if let Some(ref file_path) = current_file_path {
-                    if let Some(contract_info) =
-                        self.find_contract_in_imports(base_name, Some(&file_path))?
-                    {
-                        // Register the newly found contract
-                        self.register_contract(contract_info);
-
-                        // Get the qualified name and resolve its inheritance
-                        let new_qualified_name = self.get_qualified_name_for_contract(base_name);
-                        if !visited.contains(&new_qualified_name) {
-                            self.resolve_contract_inheritance(
-                                &new_qualified_name,
-                                visited,
-                                temp_visited,
-                            )?;
-                        }
-                        qualified_bases.push(new_qualified_name);
-
-                        // Remove from missing contracts if it was there
-                        self.missing_contracts.remove(base_name);
-                    } else {
-                        // Still not found after dynamic loading attempt
-                        self.missing_contracts.insert(base_name.clone());
+                    let new_qualified_name = self.get_qualified_name_for_contract(base_name);
+                    if !visited.contains(&new_qualified_name) {
+                        self.resolve_contract_inheritance(
+                            &new_qualified_name,
+                            visited,
+                            temp_visited,
+                        )?;
                     }
+                    qualified_bases.push(new_qualified_name);
+                    self.missing_contracts.remove(base_name);
                 } else {
-                    // No file context, can't load imports
                     self.missing_contracts.insert(base_name.clone());
                 }
+            } else {
+                self.missing_contracts.insert(base_name.clone());
             }
         }
 
-        // Use C3 linearization to compute the inheritance chain
         let inheritance_chain = if !qualified_bases.is_empty() {
-            // Create a closure to get linearization of base contracts
             let get_linearization = |base: &str| -> Result<Vec<String>, String> {
                 self.contracts
                     .get(base)
@@ -260,21 +232,18 @@ impl AnalysisContext {
                     .ok_or_else(|| format!("Contract {} not found", base))
             };
 
-            // Perform C3 linearization
             match c3_linearize(contract_name, &qualified_bases, get_linearization) {
                 Ok(chain) => chain,
-                Err(_e) => {
-                    // Fallback to simple linearization (better than nothing)
+                Err(_) => {
+                    // Fallback to simple linearization when C3 fails
                     let mut simple_chain = Vec::new();
                     for base in &qualified_bases {
                         if let Some(base_contract) = self.contracts.get(base) {
-                            // Add base's chain
                             for inherited in &base_contract.inheritance_chain {
                                 if !simple_chain.contains(inherited) {
                                     simple_chain.push(inherited.clone());
                                 }
                             }
-                            // Add base itself
                             if !simple_chain.contains(base) {
                                 simple_chain.push(base.clone());
                             }
@@ -287,7 +256,6 @@ impl AnalysisContext {
             Vec::new()
         };
 
-        // Update the contract's inheritance chain
         if let Some(contract) = self.contracts.get_mut(contract_name) {
             contract.inheritance_chain = inheritance_chain;
         }
@@ -298,55 +266,42 @@ impl AnalysisContext {
         Ok(())
     }
 
-    /// Public query methods
-
-    /// Get inheritance chain for a contract
     pub fn get_inheritance_chain(&self, contract: &str) -> Option<&[String]> {
         self.contracts
             .get(contract)
             .map(|c| c.inheritance_chain.as_slice())
     }
 
-    /// Register a contract using qualified name as key
     fn register_contract(&mut self, contract: ContractInfo) {
         let qualified_name = format!("{}:{}", contract.file_path, contract.name);
         self.contracts.insert(qualified_name, contract);
     }
 
-    /// Get contract by qualified name ("file_path:contract_name")
     pub fn get_contract(&self, qualified_name: &str) -> Option<&ContractInfo> {
         self.contracts.get(qualified_name)
     }
 
-    /// Load a file dynamically from an import path
     fn load_imported_file(
         &mut self,
         import_path: &str,
         current_file: &Path,
     ) -> Result<bool, String> {
-        // Check if we have an import resolver
         let resolver = match &self.import_resolver {
             Some(r) => r.clone(),
-            None => return Ok(false), // No resolver, can't load imports
+            None => return Ok(false),
         };
 
-        // Try to resolve the import path
         let resolved_path = match resolver.resolve_import(import_path, current_file) {
             Ok(path) => path,
-            Err(_e) => {
-                return Ok(false);
-            }
+            Err(_) => return Ok(false),
         };
 
-        // Check if already loaded
         if self.files.iter().any(|f| f.path == resolved_path) {
-            return Ok(false); // Already loaded
+            return Ok(false);
         }
 
-        // Load the file
         self.load_file(&resolved_path)?;
 
-        // Extract and register contracts from the newly loaded file
         let contracts_to_register: Vec<_> = self
             .files
             .iter()
@@ -361,25 +316,20 @@ impl AnalysisContext {
         Ok(true)
     }
 
-    /// Find a contract by name in imported files
     fn find_contract_in_imports(
         &mut self,
         contract_name: &str,
         current_file: Option<&Path>,
     ) -> Result<Option<ContractInfo>, String> {
-        // First, search through all loaded files
         for file in &self.files {
             for contract in &file.contract_definitions {
                 if contract.name == contract_name {
-                    // Found the contract, return a clone
                     return Ok(Some(contract.clone()));
                 }
             }
         }
 
-        // If we have a current file context, try to load its imports
         if let Some(current) = current_file {
-            // Get the imports from the current file
             let imports: Vec<_> = self
                 .files
                 .iter()
@@ -387,11 +337,8 @@ impl AnalysisContext {
                 .map(|f| f.imports.clone())
                 .unwrap_or_default();
 
-            // Try each import
             for import_info in imports {
-                // Try to load the imported file
                 if self.load_imported_file(&import_info.import_path, current)? {
-                    // Search again in the newly loaded files
                     for file in &self.files {
                         for contract in &file.contract_definitions {
                             if contract.name == contract_name {
@@ -406,14 +353,12 @@ impl AnalysisContext {
         Ok(None)
     }
 
-    /// Get qualified name for a contract (tries to find it in loaded contracts)
+    /// Converts simple contract name to qualified name if found.
     pub fn get_qualified_name_for_contract(&self, contract_name: &str) -> String {
-        // First, check if it's already a qualified name
         if contract_name.contains(':') {
             return contract_name.to_string();
         }
 
-        // Search for the contract in our files to get its file path
         for file in &self.files {
             for contract in &file.contract_definitions {
                 if contract.name == contract_name {
@@ -422,73 +367,199 @@ impl AnalysisContext {
             }
         }
 
-        // If not found, return the name as-is (will be handled as missing)
         contract_name.to_string()
     }
 
-    /// Get all state variables from a contract including inherited ones
-    /// Returns variables in inheritance order (base contracts first, derived last)
-    /// This matches Solidity's storage layout where base contract variables come first
-    pub fn get_all_state_variables(&self, contract_name: &str) -> Vec<String> {
-        let mut all_variables = Vec::new();
+    /// Get all state variables from a contract including inherited ones.
+    /// Returns in inheritance order (base first, derived last) matching Solidity storage layout.
+    pub fn get_all_state_variables(&self, qualified_name: &str) -> Vec<&StateVariableInfo> {
+        let mut result = Vec::new();
 
-        // Get the contract (try both as qualified name and search by simple name)
-        let contract = if let Some(contract) = self.contracts.get(contract_name) {
-            contract
-        } else {
-            // Try to find by simple name
-            let qualified_name = self.get_qualified_name_for_contract(contract_name);
-            if let Some(contract) = self.contracts.get(&qualified_name) {
-                contract
-            } else {
-                return all_variables; // Contract not found
-            }
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return result,
         };
 
-        // Add state variables from inheritance chain
-        // The chain is now in correct order (most base to most derived)
-        // So we traverse it as-is to get proper storage layout order
-        for inherited_contract_name in &contract.inheritance_chain {
-            if let Some(inherited_contract) = self.contracts.get(inherited_contract_name) {
-                all_variables.extend(inherited_contract.state_variables.clone());
+        for inherited_name in &contract.inheritance_chain {
+            if let Some(inherited) = self.contracts.get(inherited_name) {
+                result.extend(inherited.state_variables.iter());
             }
         }
 
-        // Finally, add state variables from the contract itself (most derived)
-        all_variables.extend(contract.state_variables.clone());
+        result.extend(contract.state_variables.iter());
+        result
+    }
 
-        // TODO: Handle variable shadowing and visibility modifiers
-        // Currently returns all variables including potentially shadowed ones
+    /// Get all functions from a contract including inherited ones.
+    pub fn get_all_functions(&self, qualified_name: &str) -> Vec<&FunctionInfo> {
+        let mut result = Vec::new();
 
-        all_variables
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return result,
+        };
+
+        for inherited_name in &contract.inheritance_chain {
+            if let Some(inherited) = self.contracts.get(inherited_name) {
+                result.extend(inherited.function_definitions.iter());
+            }
+        }
+
+        result.extend(contract.function_definitions.iter());
+        result
+    }
+
+    /// Get all enums from a contract including inherited ones.
+    pub fn get_all_enums(&self, qualified_name: &str) -> Vec<&EnumInfo> {
+        let mut result = Vec::new();
+
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return result,
+        };
+
+        for inherited_name in &contract.inheritance_chain {
+            if let Some(inherited) = self.contracts.get(inherited_name) {
+                result.extend(inherited.enums.iter());
+            }
+        }
+
+        result.extend(contract.enums.iter());
+        result
+    }
+
+    /// Get all errors from a contract including inherited ones.
+    pub fn get_all_errors(&self, qualified_name: &str) -> Vec<&ErrorInfo> {
+        let mut result = Vec::new();
+
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return result,
+        };
+
+        for inherited_name in &contract.inheritance_chain {
+            if let Some(inherited) = self.contracts.get(inherited_name) {
+                result.extend(inherited.errors.iter());
+            }
+        }
+
+        result.extend(contract.errors.iter());
+        result
+    }
+
+    /// Get all events from a contract including inherited ones.
+    pub fn get_all_events(&self, qualified_name: &str) -> Vec<&EventInfo> {
+        let mut result = Vec::new();
+
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return result,
+        };
+
+        for inherited_name in &contract.inheritance_chain {
+            if let Some(inherited) = self.contracts.get(inherited_name) {
+                result.extend(inherited.events.iter());
+            }
+        }
+
+        result.extend(contract.events.iter());
+        result
+    }
+
+    /// Get all structs from a contract including inherited ones.
+    pub fn get_all_structs(&self, qualified_name: &str) -> Vec<&StructInfo> {
+        let mut result = Vec::new();
+
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return result,
+        };
+
+        for inherited_name in &contract.inheritance_chain {
+            if let Some(inherited) = self.contracts.get(inherited_name) {
+                result.extend(inherited.structs.iter());
+            }
+        }
+
+        result.extend(contract.structs.iter());
+        result
+    }
+
+    /// Get all modifiers from a contract including inherited ones.
+    pub fn get_all_modifiers(&self, qualified_name: &str) -> Vec<&ModifierInfo> {
+        let mut result = Vec::new();
+
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return result,
+        };
+
+        for inherited_name in &contract.inheritance_chain {
+            if let Some(inherited) = self.contracts.get(inherited_name) {
+                result.extend(inherited.modifiers.iter());
+            }
+        }
+
+        result.extend(contract.modifiers.iter());
+        result
+    }
+
+    /// Get all type definitions from a contract including inherited ones.
+    pub fn get_all_type_definitions(&self, qualified_name: &str) -> Vec<&TypeDefinitionInfo> {
+        let mut result = Vec::new();
+
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return result,
+        };
+
+        for inherited_name in &contract.inheritance_chain {
+            if let Some(inherited) = self.contracts.get(inherited_name) {
+                result.extend(inherited.type_definitions.iter());
+            }
+        }
+
+        result.extend(contract.type_definitions.iter());
+        result
+    }
+
+    /// Get all using directives from a contract including inherited ones.
+    pub fn get_all_using_directives(&self, qualified_name: &str) -> Vec<&UsingDirectiveInfo> {
+        let mut result = Vec::new();
+
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return result,
+        };
+
+        for inherited_name in &contract.inheritance_chain {
+            if let Some(inherited) = self.contracts.get(inherited_name) {
+                result.extend(inherited.using_directives.iter());
+            }
+        }
+
+        result.extend(contract.using_directives.iter());
+        result
+    }
+
+    pub fn get_file_by_path(&self, path: &Path) -> Option<&SolidityFile> {
+        self.files.iter().find(|f| f.path == path)
     }
 
     /// Check if a contract inherits from a specific base contract
-    /// Searches through the entire inheritance chain for a pattern match
-    pub fn inherits_from(&self, contract_name: &str, base_pattern: &str) -> bool {
-        // Get the contract (try both as qualified name and search by simple name)
-        let contract = if let Some(contract) = self.contracts.get(contract_name) {
-            contract
-        } else {
-            // Try to find by simple name
-            let qualified_name = self.get_qualified_name_for_contract(contract_name);
-            if let Some(contract) = self.contracts.get(&qualified_name) {
-                contract
-            } else {
-                return false; // Contract not found
-            }
+    pub fn inherits_from(&self, qualified_name: &str, base_pattern: &str) -> bool {
+        let contract = match self.contracts.get(qualified_name) {
+            Some(c) => c,
+            None => return false,
         };
 
-        // Check if any contract in the inheritance chain matches the pattern
-        contract.inheritance_chain.iter().any(|inherited| {
-            // Check if the inherited contract name contains the pattern
-            // This handles cases like "Ownable", "Ownable2Step", etc.
-            inherited.contains(base_pattern)
-        })
+        contract
+            .inheritance_chain
+            .iter()
+            .any(|inherited| inherited.contains(base_pattern))
     }
 
-    /// Check if a contract inherits from a base - using contract definition and file directly
-    /// This is the preferred method for detectors to use
+    /// Check if a contract inherits from a base
     pub fn contract_inherits_from(
         &self,
         contract_def: &solang_parser::pt::ContractDefinition,
@@ -520,7 +591,7 @@ impl AnalysisContext {
             contract_info
                 .function_definitions
                 .iter()
-                .any(|f| f == function_name)
+                .any(|f| f.name == function_name)
         } else {
             false
         }

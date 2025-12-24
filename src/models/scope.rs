@@ -3,7 +3,10 @@ use solang_parser::pt::{ContractTy, SourceUnit, SourceUnitPart};
 use std::path::PathBuf;
 
 use crate::utils::ast_utils::{
-    extract_contract_info, extract_solidity_version_from_pragma, process_import_directive,
+    extract_contract_info, extract_enum_info, extract_error_info, extract_event_info,
+    extract_function_info, extract_solidity_version_from_pragma, extract_struct_info,
+    extract_type_definition_info, extract_using_directive_info, extract_variable_info,
+    process_import_directive,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +23,14 @@ pub struct SolidityFile {
     pub solidity_version: Option<String>,
     pub imports: Vec<ImportInfo>,
     pub contract_definitions: Vec<ContractInfo>,
+    pub enums: Vec<EnumInfo>,
+    pub errors: Vec<ErrorInfo>,
+    pub events: Vec<EventInfo>,
+    pub structs: Vec<StructInfo>,
+    pub type_definitions: Vec<TypeDefinitionInfo>,
+    pub using_directives: Vec<UsingDirectiveInfo>,
+    pub variables: Vec<StateVariableInfo>,
+    pub functions: Vec<FunctionInfo>,
 
     #[serde(skip)]
     pub source_unit: SourceUnit,
@@ -43,6 +54,14 @@ impl SolidityFile {
             solidity_version: None,
             contract_definitions: Vec::new(),
             imports: Vec::new(),
+            enums: Vec::new(),
+            errors: Vec::new(),
+            events: Vec::new(),
+            structs: Vec::new(),
+            type_definitions: Vec::new(),
+            using_directives: Vec::new(),
+            variables: Vec::new(),
+            functions: Vec::new(),
             line_starts,
         }
     }
@@ -64,6 +83,38 @@ impl SolidityFile {
                     if let Ok(contract) = extract_contract_info(contract_def, &self.path) {
                         self.contract_definitions.push(contract);
                     }
+                }
+                SourceUnitPart::EnumDefinition(enum_def) => {
+                    let enum_info = extract_enum_info(enum_def);
+                    self.enums.push(enum_info);
+                }
+                SourceUnitPart::ErrorDefinition(error_def) => {
+                    let error_info = extract_error_info(error_def);
+                    self.errors.push(error_info);
+                }
+                SourceUnitPart::EventDefinition(event_def) => {
+                    let event_info = extract_event_info(event_def);
+                    self.events.push(event_info);
+                }
+                SourceUnitPart::StructDefinition(struct_def) => {
+                    let struct_info = extract_struct_info(struct_def);
+                    self.structs.push(struct_info);
+                }
+                SourceUnitPart::TypeDefinition(type_def) => {
+                    let type_info = extract_type_definition_info(type_def);
+                    self.type_definitions.push(type_info);
+                }
+                SourceUnitPart::Using(using) => {
+                    let using_info = extract_using_directive_info(using);
+                    self.using_directives.push(using_info);
+                }
+                SourceUnitPart::VariableDefinition(var_def) => {
+                    let var_info = extract_variable_info(var_def);
+                    self.variables.push(var_info);
+                }
+                SourceUnitPart::FunctionDefinition(func_def) => {
+                    let func_info = extract_function_info(func_def);
+                    self.functions.push(func_info);
                 }
                 _ => {}
             }
@@ -98,8 +149,15 @@ pub struct ContractInfo {
     pub file_path: String,
     pub direct_bases: Vec<String>,
     pub inheritance_chain: Vec<String>,
-    pub state_variables: Vec<String>,
-    pub function_definitions: Vec<String>,
+    pub state_variables: Vec<StateVariableInfo>,
+    pub function_definitions: Vec<FunctionInfo>,
+    pub enums: Vec<EnumInfo>,
+    pub errors: Vec<ErrorInfo>,
+    pub events: Vec<EventInfo>,
+    pub structs: Vec<StructInfo>,
+    pub modifiers: Vec<ModifierInfo>,
+    pub type_definitions: Vec<TypeDefinitionInfo>,
+    pub using_directives: Vec<UsingDirectiveInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,6 +165,143 @@ pub struct ImportInfo {
     pub import_path: String,
     pub resolved_path: Option<PathBuf>,
     pub symbols: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EnumInfo {
+    pub name: String,
+    pub values: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ErrorInfo {
+    pub name: String,
+    pub parameters: Vec<ErrorParameter>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ErrorParameter {
+    pub name: Option<String>,
+    pub type_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EventInfo {
+    pub name: String,
+    pub parameters: Vec<EventParameter>,
+    pub anonymous: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EventParameter {
+    pub name: Option<String>,
+    pub type_name: String,
+    pub indexed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StructInfo {
+    pub name: String,
+    pub fields: Vec<StructField>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StructField {
+    pub name: Option<String>,
+    pub type_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModifierInfo {
+    pub name: String,
+    pub parameters: Vec<ModifierParameter>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModifierParameter {
+    pub name: Option<String>,
+    pub type_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TypeDefinitionInfo {
+    pub name: String,
+    pub underlying_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UsingDirectiveInfo {
+    pub library_name: Option<String>,
+    pub functions: Vec<String>,
+    pub target_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StateVariableInfo {
+    pub name: String,
+    pub type_name: String,
+    pub visibility: VariableVisibility,
+    pub mutability: VariableMutability,
+    pub is_constant: bool,
+    pub is_immutable: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum VariableVisibility {
+    Public,
+    Private,
+    Internal,
+    External,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum VariableMutability {
+    Mutable,
+    Constant,
+    Immutable,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FunctionInfo {
+    pub name: String,
+    pub parameters: Vec<FunctionParameter>,
+    pub return_parameters: Vec<FunctionParameter>,
+    pub visibility: FunctionVisibility,
+    pub mutability: FunctionMutability,
+    pub function_type: FunctionType,
+    pub modifiers: Vec<String>,
+    pub is_virtual: bool,
+    pub is_override: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FunctionParameter {
+    pub name: Option<String>,
+    pub type_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum FunctionVisibility {
+    Public,
+    Private,
+    Internal,
+    External,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum FunctionMutability {
+    Pure,
+    View,
+    Payable,
+    Nonpayable,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum FunctionType {
+    Function,
+    Constructor,
+    Fallback,
+    Receive,
 }
 
 pub type ScopeFiles = Vec<SolidityFile>;

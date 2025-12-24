@@ -3,14 +3,18 @@ use std::path::Path;
 use crate::{
     models::{
         finding::{FindingData, Location},
-        ContractInfo, ContractType, ImportInfo, SolidityFile,
+        ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter,
+        FunctionInfo, FunctionMutability, FunctionParameter, FunctionType, FunctionVisibility,
+        ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StateVariableInfo, StructField,
+        StructInfo, TypeDefinitionInfo, UsingDirectiveInfo, VariableMutability, VariableVisibility,
     },
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{
-    ContractDefinition, ContractPart, Expression, FunctionAttribute, FunctionDefinition, Import, 
-    Loc, Mutability, PragmaDirective, SourceUnit, SourceUnitPart, Statement, Type, 
-    VariableDefinition, VersionComparator, VersionOp, Visibility
+    ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition, EventDefinition, Expression,
+    FunctionAttribute, FunctionDefinition, FunctionTy, Import, Loc, Mutability, PragmaDirective,
+    SourceUnit, SourceUnitPart, Statement, StructDefinition, Type, TypeDefinition, Using,
+    UsingList, VariableDefinition, VersionComparator, VersionOp, Visibility,
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -609,19 +613,462 @@ fn extract_contracts(
     Ok(contracts)
 }
 
-/// Extract state variables from a contract definition
-pub fn extract_state_variables(contract_def: &ContractDefinition) -> Vec<String> {
-    let mut state_variables = Vec::new();
+/// Extract variable information from a variable definition
+pub fn extract_variable_info(var_def: &VariableDefinition) -> StateVariableInfo {
+    let name = var_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
 
-    for part in &contract_def.parts {
-        if let ContractPart::VariableDefinition(var_def) = part {
-            if let Some(name) = &var_def.name {
-                state_variables.push(name.name.clone());
+    let type_name = extract_type_name(&var_def.ty);
+
+    // Determine visibility from attrs
+    let visibility = var_def
+        .attrs
+        .iter()
+        .find_map(|attr| match attr {
+            solang_parser::pt::VariableAttribute::Visibility(vis) => Some(match vis {
+                Visibility::Public(_) => VariableVisibility::Public,
+                Visibility::Private(_) => VariableVisibility::Private,
+                Visibility::Internal(_) => VariableVisibility::Internal,
+                Visibility::External(_) => VariableVisibility::External,
+            }),
+            _ => None,
+        })
+        .unwrap_or(VariableVisibility::Internal); // Default visibility for state variables
+
+    // Check for constant and immutable
+    let is_constant = var_def
+        .attrs
+        .iter()
+        .any(|attr| matches!(attr, solang_parser::pt::VariableAttribute::Constant(_)));
+
+    let is_immutable = var_def
+        .attrs
+        .iter()
+        .any(|attr| matches!(attr, solang_parser::pt::VariableAttribute::Immutable(_)));
+
+    // Determine mutability
+    let mutability = if is_constant {
+        VariableMutability::Constant
+    } else if is_immutable {
+        VariableMutability::Immutable
+    } else {
+        VariableMutability::Mutable
+    };
+
+    StateVariableInfo {
+        name,
+        type_name,
+        visibility,
+        mutability,
+        is_constant,
+        is_immutable,
+    }
+}
+
+/// Extract state variables from a contract definition
+pub fn extract_state_variables(contract_def: &ContractDefinition) -> Vec<StateVariableInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::VariableDefinition(var_def) = part {
+                Some(extract_variable_info(var_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract enum information from an enum definition
+pub fn extract_enum_info(enum_def: &EnumDefinition) -> EnumInfo {
+    let name = enum_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let values = enum_def
+        .values
+        .iter()
+        .filter_map(|value| value.as_ref().map(|id| id.name.clone()))
+        .collect();
+
+    EnumInfo { name, values }
+}
+
+/// Extract enums from a contract definition
+pub fn extract_contract_enums(contract_def: &ContractDefinition) -> Vec<EnumInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::EnumDefinition(enum_def) = part {
+                Some(extract_enum_info(enum_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Helper to extract type name from Expression
+fn extract_type_name(type_expr: &Expression) -> String {
+    match type_expr {
+        Expression::Variable(ident) => ident.name.clone(),
+        Expression::Type(_, ty) => format!("{:?}", ty),
+        Expression::ArraySubscript(_, base, size) => {
+            let base_type = extract_type_name(base);
+            if let Some(size_expr) = size {
+                format!("{}[{}]", base_type, extract_simple_expr(size_expr))
+            } else {
+                format!("{}[]", base_type)
             }
         }
+        Expression::MemberAccess(_, obj, member) => {
+            format!("{}.{}", extract_type_name(obj), member.name)
+        }
+        _ => "unknown".to_string(),
+    }
+}
+
+/// Helper to extract simple expression value (for array sizes, etc.)
+fn extract_simple_expr(expr: &Expression) -> String {
+    match expr {
+        Expression::NumberLiteral(_, val, _, _) => val.clone(),
+        Expression::Variable(ident) => ident.name.clone(),
+        _ => String::new(),
+    }
+}
+
+/// Extract error information from an error definition
+pub fn extract_error_info(error_def: &ErrorDefinition) -> ErrorInfo {
+    let name = error_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let parameters = error_def
+        .fields
+        .iter()
+        .map(|param| ErrorParameter {
+            name: param.name.as_ref().map(|id| id.name.clone()),
+            type_name: extract_type_name(&param.ty),
+        })
+        .collect();
+
+    ErrorInfo { name, parameters }
+}
+
+/// Extract errors from a contract definition
+pub fn extract_contract_errors(contract_def: &ContractDefinition) -> Vec<ErrorInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::ErrorDefinition(error_def) = part {
+                Some(extract_error_info(error_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract event information from an event definition
+pub fn extract_event_info(event_def: &EventDefinition) -> EventInfo {
+    let name = event_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let parameters = event_def
+        .fields
+        .iter()
+        .map(|param| EventParameter {
+            name: param.name.as_ref().map(|id| id.name.clone()),
+            type_name: extract_type_name(&param.ty),
+            indexed: param.indexed,
+        })
+        .collect();
+
+    EventInfo {
+        name,
+        parameters,
+        anonymous: event_def.anonymous,
+    }
+}
+
+/// Extract events from a contract definition
+pub fn extract_contract_events(contract_def: &ContractDefinition) -> Vec<EventInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::EventDefinition(event_def) = part {
+                Some(extract_event_info(event_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract struct information from a struct definition
+pub fn extract_struct_info(struct_def: &StructDefinition) -> StructInfo {
+    let name = struct_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let fields = struct_def
+        .fields
+        .iter()
+        .map(|field| StructField {
+            name: field.name.as_ref().map(|id| id.name.clone()),
+            type_name: extract_type_name(&field.ty),
+        })
+        .collect();
+
+    StructInfo { name, fields }
+}
+
+/// Extract structs from a contract definition
+pub fn extract_contract_structs(contract_def: &ContractDefinition) -> Vec<StructInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::StructDefinition(struct_def) = part {
+                Some(extract_struct_info(struct_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract modifier information from a modifier definition
+pub fn extract_modifier_info(modifier_def: &FunctionDefinition) -> ModifierInfo {
+    let name = modifier_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let parameters = modifier_def
+        .params
+        .iter()
+        .filter_map(|(_, param_opt)| {
+            param_opt.as_ref().map(|param| ModifierParameter {
+                name: param.name.as_ref().map(|id| id.name.clone()),
+                type_name: extract_type_name(&param.ty),
+            })
+        })
+        .collect();
+
+    ModifierInfo { name, parameters }
+}
+
+/// Extract modifiers from a contract definition
+pub fn extract_contract_modifiers(contract_def: &ContractDefinition) -> Vec<ModifierInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::FunctionDefinition(func_def) = part {
+                if matches!(func_def.ty, FunctionTy::Modifier) {
+                    Some(extract_modifier_info(func_def))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract type definition information from a type definition
+pub fn extract_type_definition_info(type_def: &TypeDefinition) -> TypeDefinitionInfo {
+    let name = type_def.name.name.clone();
+    let underlying_type = extract_type_name(&type_def.ty);
+
+    TypeDefinitionInfo {
+        name,
+        underlying_type,
+    }
+}
+
+/// Extract type definitions from a contract definition
+pub fn extract_contract_type_definitions(contract_def: &ContractDefinition) -> Vec<TypeDefinitionInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::TypeDefinition(type_def) = part {
+                Some(extract_type_definition_info(type_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract using directive information from a using directive
+pub fn extract_using_directive_info(using: &Using) -> UsingDirectiveInfo {
+    let mut library_name = None;
+    let mut functions = Vec::new();
+
+    match &using.list {
+        UsingList::Library(ident_path) => {
+            library_name = ident_path.identifiers.last().map(|id| id.name.clone());
+        }
+        UsingList::Functions(func_list) => {
+            functions = func_list
+                .iter()
+                .filter_map(|item| item.path.identifiers.last().map(|id| id.name.clone()))
+                .collect();
+        }
+        _ => {}
     }
 
-    state_variables
+    let target_type = using.ty.as_ref().map(|ty| extract_type_name(ty));
+
+    UsingDirectiveInfo {
+        library_name,
+        functions,
+        target_type,
+    }
+}
+
+/// Extract using directives from a contract definition
+pub fn extract_contract_using_directives(contract_def: &ContractDefinition) -> Vec<UsingDirectiveInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::Using(using) = part {
+                Some(extract_using_directive_info(using))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract function information from a function definition
+pub fn extract_function_info(func_def: &FunctionDefinition) -> FunctionInfo {
+    // Extract function name
+    let name = func_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    // Determine function type
+    let function_type = match func_def.ty {
+        FunctionTy::Constructor => FunctionType::Constructor,
+        FunctionTy::Fallback => FunctionType::Fallback,
+        FunctionTy::Receive => FunctionType::Receive,
+        FunctionTy::Function | FunctionTy::Modifier => FunctionType::Function,
+    };
+
+    // Extract parameters
+    let parameters: Vec<FunctionParameter> = func_def
+        .params
+        .iter()
+        .filter_map(|(_, param_opt)| {
+            param_opt.as_ref().map(|param| FunctionParameter {
+                name: param.name.as_ref().map(|id| id.name.clone()),
+                type_name: extract_type_name(&param.ty),
+            })
+        })
+        .collect();
+
+    // Extract return parameters
+    let return_parameters: Vec<FunctionParameter> = func_def
+        .returns
+        .iter()
+        .filter_map(|(_, param_opt)| {
+            param_opt.as_ref().map(|param| FunctionParameter {
+                name: param.name.as_ref().map(|id| id.name.clone()),
+                type_name: extract_type_name(&param.ty),
+            })
+        })
+        .collect();
+
+    // Extract visibility from attributes
+    let visibility = func_def
+        .attributes
+        .iter()
+        .find_map(|attr| match attr {
+            FunctionAttribute::Visibility(vis) => Some(match vis {
+                Visibility::Public(_) => FunctionVisibility::Public,
+                Visibility::Private(_) => FunctionVisibility::Private,
+                Visibility::Internal(_) => FunctionVisibility::Internal,
+                Visibility::External(_) => FunctionVisibility::External,
+            }),
+            _ => None,
+        })
+        .unwrap_or(FunctionVisibility::Internal); // Default visibility
+
+    // Extract mutability from attributes
+    let mutability = func_def
+        .attributes
+        .iter()
+        .find_map(|attr| match attr {
+            FunctionAttribute::Mutability(m) => Some(match m {
+                Mutability::Pure(_) => FunctionMutability::Pure,
+                Mutability::View(_) => FunctionMutability::View,
+                Mutability::Payable(_) => FunctionMutability::Payable,
+                Mutability::Constant(_) => FunctionMutability::View, // Constant is deprecated, treat as view
+            }),
+            _ => None,
+        })
+        .unwrap_or(FunctionMutability::Nonpayable); // Default mutability
+
+    // Extract modifiers applied to this function
+    let modifiers: Vec<String> = func_def
+        .attributes
+        .iter()
+        .filter_map(|attr| {
+            if let FunctionAttribute::BaseOrModifier(_, base) = attr {
+                base.name.identifiers.last().map(|id| id.name.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Check for virtual and override flags
+    let is_virtual = func_def
+        .attributes
+        .iter()
+        .any(|attr| matches!(attr, FunctionAttribute::Virtual(_)));
+
+    let is_override = func_def
+        .attributes
+        .iter()
+        .any(|attr| matches!(attr, FunctionAttribute::Override(_, _)));
+
+    FunctionInfo {
+        name,
+        parameters,
+        return_parameters,
+        visibility,
+        mutability,
+        function_type,
+        modifiers,
+        is_virtual,
+        is_override,
+    }
 }
 
 /// Extract information from a single contract definition
@@ -654,18 +1101,44 @@ pub fn extract_contract_info(
     // Extract state variables
     let state_variables = extract_state_variables(contract_def);
 
-    // Extract function definitions
+    // Extract function definitions (exclude modifiers as they are extracted separately)
     let function_definitions = contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::FunctionDefinition(func_def) = part {
-                func_def.name.as_ref().map(|n| n.name.clone())
+                // Skip modifiers - they are extracted separately
+                if !matches!(func_def.ty, FunctionTy::Modifier) {
+                    Some(extract_function_info(func_def))
+                } else {
+                    None
+                }
             } else {
                 None
             }
         })
         .collect();
+
+    // Extract enums
+    let enums = extract_contract_enums(contract_def);
+
+    // Extract errors
+    let errors = extract_contract_errors(contract_def);
+
+    // Extract events
+    let events = extract_contract_events(contract_def);
+
+    // Extract structs
+    let structs = extract_contract_structs(contract_def);
+
+    // Extract modifiers
+    let modifiers = extract_contract_modifiers(contract_def);
+
+    // Extract type definitions
+    let type_definitions = extract_contract_type_definitions(contract_def);
+
+    // Extract using directives
+    let using_directives = extract_contract_using_directives(contract_def);
 
     Ok(ContractInfo {
         name: name.name.clone(),
@@ -675,6 +1148,13 @@ pub fn extract_contract_info(
         inheritance_chain: Vec::new(), // Will be populated in second pass
         state_variables,
         function_definitions,
+        enums,
+        errors,
+        events,
+        structs,
+        modifiers,
+        type_definitions,
+        using_directives,
     })
 }
 
