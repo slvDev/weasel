@@ -155,6 +155,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::gas::CustomErrorsInsteadOfRevertStringsDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::gas::CacheStateVariablesDetector::default(),
+        ));
 
         // NC detectors
         self.register_detector(Arc::new(
