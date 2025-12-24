@@ -429,7 +429,7 @@ impl AnalysisContext {
     /// Get all state variables from a contract including inherited ones
     /// Returns variables in inheritance order (base contracts first, derived last)
     /// This matches Solidity's storage layout where base contract variables come first
-    pub fn get_all_state_variables(&self, contract_name: &str) -> Vec<String> {
+    pub fn get_all_state_variables(&self, contract_name: &str) -> Vec<crate::models::StateVariableInfo> {
         let mut all_variables = Vec::new();
 
         // Get the contract (try both as qualified name and search by simple name)
@@ -456,9 +456,6 @@ impl AnalysisContext {
 
         // Finally, add state variables from the contract itself (most derived)
         all_variables.extend(contract.state_variables.clone());
-
-        // TODO: Handle variable shadowing and visibility modifiers
-        // Currently returns all variables including potentially shadowed ones
 
         all_variables
     }

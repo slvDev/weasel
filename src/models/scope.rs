@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use crate::utils::ast_utils::{
     extract_contract_info, extract_enum_info, extract_error_info, extract_event_info,
     extract_solidity_version_from_pragma, extract_struct_info, extract_type_definition_info,
-    extract_using_directive_info, process_import_directive,
+    extract_using_directive_info, extract_variable_info, process_import_directive,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +28,7 @@ pub struct SolidityFile {
     pub structs: Vec<StructInfo>,
     pub type_definitions: Vec<TypeDefinitionInfo>,
     pub using_directives: Vec<UsingDirectiveInfo>,
+    pub variables: Vec<StateVariableInfo>,
 
     #[serde(skip)]
     pub source_unit: SourceUnit,
@@ -57,6 +58,7 @@ impl SolidityFile {
             structs: Vec::new(),
             type_definitions: Vec::new(),
             using_directives: Vec::new(),
+            variables: Vec::new(),
             line_starts,
         }
     }
@@ -103,6 +105,10 @@ impl SolidityFile {
                     let using_info = extract_using_directive_info(using);
                     self.using_directives.push(using_info);
                 }
+                SourceUnitPart::VariableDefinition(var_def) => {
+                    let var_info = extract_variable_info(var_def);
+                    self.variables.push(var_info);
+                }
                 _ => {}
             }
         }
@@ -136,7 +142,7 @@ pub struct ContractInfo {
     pub file_path: String,
     pub direct_bases: Vec<String>,
     pub inheritance_chain: Vec<String>,
-    pub state_variables: Vec<String>,
+    pub state_variables: Vec<StateVariableInfo>,
     pub function_definitions: Vec<String>,
     pub enums: Vec<EnumInfo>,
     pub errors: Vec<ErrorInfo>,
@@ -221,6 +227,31 @@ pub struct UsingDirectiveInfo {
     pub library_name: Option<String>,
     pub functions: Vec<String>,
     pub target_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StateVariableInfo {
+    pub name: String,
+    pub type_name: String,
+    pub visibility: VariableVisibility,
+    pub mutability: VariableMutability,
+    pub is_constant: bool,
+    pub is_immutable: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum VariableVisibility {
+    Public,
+    Private,
+    Internal,
+    External,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum VariableMutability {
+    Mutable,
+    Constant,
+    Immutable,
 }
 
 pub type ScopeFiles = Vec<SolidityFile>;

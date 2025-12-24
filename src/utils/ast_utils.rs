@@ -4,8 +4,8 @@ use crate::{
     models::{
         finding::{FindingData, Location},
         ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter,
-        ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StructField, StructInfo,
-        TypeDefinitionInfo, UsingDirectiveInfo,
+        ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StateVariableInfo, StructField,
+        StructInfo, TypeDefinitionInfo, UsingDirectiveInfo, VariableMutability, VariableVisibility,
     },
     utils::location::loc_to_location,
 };
@@ -612,19 +612,74 @@ fn extract_contracts(
     Ok(contracts)
 }
 
-/// Extract state variables from a contract definition
-pub fn extract_state_variables(contract_def: &ContractDefinition) -> Vec<String> {
-    let mut state_variables = Vec::new();
+/// Extract variable information from a variable definition
+pub fn extract_variable_info(var_def: &VariableDefinition) -> StateVariableInfo {
+    let name = var_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
 
-    for part in &contract_def.parts {
-        if let ContractPart::VariableDefinition(var_def) = part {
-            if let Some(name) = &var_def.name {
-                state_variables.push(name.name.clone());
-            }
-        }
+    let type_name = extract_type_name(&var_def.ty);
+
+    // Determine visibility from attrs
+    let visibility = var_def
+        .attrs
+        .iter()
+        .find_map(|attr| match attr {
+            solang_parser::pt::VariableAttribute::Visibility(vis) => Some(match vis {
+                Visibility::Public(_) => VariableVisibility::Public,
+                Visibility::Private(_) => VariableVisibility::Private,
+                Visibility::Internal(_) => VariableVisibility::Internal,
+                Visibility::External(_) => VariableVisibility::External,
+            }),
+            _ => None,
+        })
+        .unwrap_or(VariableVisibility::Internal); // Default visibility for state variables
+
+    // Check for constant and immutable
+    let is_constant = var_def
+        .attrs
+        .iter()
+        .any(|attr| matches!(attr, solang_parser::pt::VariableAttribute::Constant(_)));
+
+    let is_immutable = var_def
+        .attrs
+        .iter()
+        .any(|attr| matches!(attr, solang_parser::pt::VariableAttribute::Immutable(_)));
+
+    // Determine mutability
+    let mutability = if is_constant {
+        VariableMutability::Constant
+    } else if is_immutable {
+        VariableMutability::Immutable
+    } else {
+        VariableMutability::Mutable
+    };
+
+    StateVariableInfo {
+        name,
+        type_name,
+        visibility,
+        mutability,
+        is_constant,
+        is_immutable,
     }
+}
 
-    state_variables
+/// Extract state variables from a contract definition
+pub fn extract_state_variables(contract_def: &ContractDefinition) -> Vec<StateVariableInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::VariableDefinition(var_def) = part {
+                Some(extract_variable_info(var_def))
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 /// Extract enum information from an enum definition
