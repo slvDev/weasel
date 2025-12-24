@@ -3,14 +3,14 @@ use std::path::Path;
 use crate::{
     models::{
         finding::{FindingData, Location},
-        ContractInfo, ContractType, ImportInfo, SolidityFile,
+        ContractInfo, ContractType, EnumInfo, ImportInfo, SolidityFile,
     },
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{
-    ContractDefinition, ContractPart, Expression, FunctionAttribute, FunctionDefinition, Import, 
-    Loc, Mutability, PragmaDirective, SourceUnit, SourceUnitPart, Statement, Type, 
-    VariableDefinition, VersionComparator, VersionOp, Visibility
+    ContractDefinition, ContractPart, EnumDefinition, Expression, FunctionAttribute,
+    FunctionDefinition, Import, Loc, Mutability, PragmaDirective, SourceUnit, SourceUnitPart,
+    Statement, Type, VariableDefinition, VersionComparator, VersionOp, Visibility,
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -624,6 +624,38 @@ pub fn extract_state_variables(contract_def: &ContractDefinition) -> Vec<String>
     state_variables
 }
 
+/// Extract enum information from an enum definition
+pub fn extract_enum_info(enum_def: &EnumDefinition) -> EnumInfo {
+    let name = enum_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let values = enum_def
+        .values
+        .iter()
+        .filter_map(|value| value.as_ref().map(|id| id.name.clone()))
+        .collect();
+
+    EnumInfo { name, values }
+}
+
+/// Extract enums from a contract definition
+pub fn extract_contract_enums(contract_def: &ContractDefinition) -> Vec<EnumInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::EnumDefinition(enum_def) = part {
+                Some(extract_enum_info(enum_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Extract information from a single contract definition
 pub fn extract_contract_info(
     contract_def: &ContractDefinition,
@@ -667,6 +699,9 @@ pub fn extract_contract_info(
         })
         .collect();
 
+    // Extract enums
+    let enums = extract_contract_enums(contract_def);
+
     Ok(ContractInfo {
         name: name.name.clone(),
         contract_type,
@@ -675,6 +710,7 @@ pub fn extract_contract_info(
         inheritance_chain: Vec::new(), // Will be populated in second pass
         state_variables,
         function_definitions,
+        enums,
     })
 }
 

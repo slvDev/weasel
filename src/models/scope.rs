@@ -3,7 +3,8 @@ use solang_parser::pt::{ContractTy, SourceUnit, SourceUnitPart};
 use std::path::PathBuf;
 
 use crate::utils::ast_utils::{
-    extract_contract_info, extract_solidity_version_from_pragma, process_import_directive,
+    extract_contract_info, extract_enum_info, extract_solidity_version_from_pragma,
+    process_import_directive,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +21,7 @@ pub struct SolidityFile {
     pub solidity_version: Option<String>,
     pub imports: Vec<ImportInfo>,
     pub contract_definitions: Vec<ContractInfo>,
+    pub enums: Vec<EnumInfo>,
 
     #[serde(skip)]
     pub source_unit: SourceUnit,
@@ -43,6 +45,7 @@ impl SolidityFile {
             solidity_version: None,
             contract_definitions: Vec::new(),
             imports: Vec::new(),
+            enums: Vec::new(),
             line_starts,
         }
     }
@@ -64,6 +67,10 @@ impl SolidityFile {
                     if let Ok(contract) = extract_contract_info(contract_def, &self.path) {
                         self.contract_definitions.push(contract);
                     }
+                }
+                SourceUnitPart::EnumDefinition(enum_def) => {
+                    let enum_info = extract_enum_info(enum_def);
+                    self.enums.push(enum_info);
                 }
                 _ => {}
             }
@@ -100,6 +107,7 @@ pub struct ContractInfo {
     pub inheritance_chain: Vec<String>,
     pub state_variables: Vec<String>,
     pub function_definitions: Vec<String>,
+    pub enums: Vec<EnumInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,6 +115,12 @@ pub struct ImportInfo {
     pub import_path: String,
     pub resolved_path: Option<PathBuf>,
     pub symbols: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EnumInfo {
+    pub name: String,
+    pub values: Vec<String>,
 }
 
 pub type ScopeFiles = Vec<SolidityFile>;
