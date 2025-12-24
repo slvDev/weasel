@@ -11,6 +11,7 @@ pub mod custom_errors_instead_of_revert_strings;
 pub mod default_value_initialization;
 pub mod long_revert_string;
 pub mod msg_sender_usage;
+pub mod payable_function;
 pub mod unchecked_loop_increment;
 pub mod unnecessary_variable_cache;
 pub mod unsafe_array_access;
@@ -29,6 +30,7 @@ pub use custom_errors_instead_of_revert_strings::CustomErrorsInsteadOfRevertStri
 pub use default_value_initialization::DefaultValueInitializationDetector;
 pub use long_revert_string::LongRevertStringDetector;
 pub use msg_sender_usage::MsgSenderUsageDetector;
+pub use payable_function::PayableFunctionDetector;
 pub use unchecked_loop_increment::UncheckedLoopIncrementDetector;
 pub use unnecessary_variable_cache::UnnecessaryVariableCacheDetector;
 pub use unsafe_array_access::UnsafeArrayAccessDetector;
