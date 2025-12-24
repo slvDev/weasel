@@ -164,6 +164,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::gas::UnnecessaryVariableCacheDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::gas::UseErc721aDetector::default(),
+        ));
 
         // NC detectors
         self.register_detector(Arc::new(

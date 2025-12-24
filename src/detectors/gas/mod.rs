@@ -12,6 +12,7 @@ pub mod msg_sender_usage;
 pub mod unchecked_loop_increment;
 pub mod unnecessary_variable_cache;
 pub mod unsafe_array_access;
+pub mod use_erc721a;
 
 pub use address_zero_check::AddressZeroCheckDetector;
 pub use array_compound_assignment::ArrayCompoundAssignmentDetector;
@@ -27,3 +28,4 @@ pub use msg_sender_usage::MsgSenderUsageDetector;
 pub use unchecked_loop_increment::UncheckedLoopIncrementDetector;
 pub use unnecessary_variable_cache::UnnecessaryVariableCacheDetector;
 pub use unsafe_array_access::UnsafeArrayAccessDetector;
+pub use use_erc721a::UseErc721aDetector;
