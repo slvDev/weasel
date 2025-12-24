@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::utils::ast_utils::{
     extract_contract_info, extract_enum_info, extract_error_info, extract_event_info,
-    extract_solidity_version_from_pragma, process_import_directive,
+    extract_solidity_version_from_pragma, extract_struct_info, process_import_directive,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +24,7 @@ pub struct SolidityFile {
     pub enums: Vec<EnumInfo>,
     pub errors: Vec<ErrorInfo>,
     pub events: Vec<EventInfo>,
+    pub structs: Vec<StructInfo>,
 
     #[serde(skip)]
     pub source_unit: SourceUnit,
@@ -50,6 +51,7 @@ impl SolidityFile {
             enums: Vec::new(),
             errors: Vec::new(),
             events: Vec::new(),
+            structs: Vec::new(),
             line_starts,
         }
     }
@@ -83,6 +85,10 @@ impl SolidityFile {
                 SourceUnitPart::EventDefinition(event_def) => {
                     let event_info = extract_event_info(event_def);
                     self.events.push(event_info);
+                }
+                SourceUnitPart::StructDefinition(struct_def) => {
+                    let struct_info = extract_struct_info(struct_def);
+                    self.structs.push(struct_info);
                 }
                 _ => {}
             }
@@ -122,6 +128,8 @@ pub struct ContractInfo {
     pub enums: Vec<EnumInfo>,
     pub errors: Vec<ErrorInfo>,
     pub events: Vec<EventInfo>,
+    pub structs: Vec<StructInfo>,
+    pub modifiers: Vec<ModifierInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,6 +169,30 @@ pub struct EventParameter {
     pub name: Option<String>,
     pub type_name: String,
     pub indexed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StructInfo {
+    pub name: String,
+    pub fields: Vec<StructField>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StructField {
+    pub name: Option<String>,
+    pub type_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModifierInfo {
+    pub name: String,
+    pub parameters: Vec<ModifierParameter>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModifierParameter {
+    pub name: Option<String>,
+    pub type_name: String,
 }
 
 pub type ScopeFiles = Vec<SolidityFile>;

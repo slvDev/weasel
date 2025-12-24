@@ -4,14 +4,15 @@ use crate::{
     models::{
         finding::{FindingData, Location},
         ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter,
-        ImportInfo, SolidityFile,
+        ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StructField, StructInfo,
     },
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{
     ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition, EventDefinition, Expression,
-    FunctionAttribute, FunctionDefinition, Import, Loc, Mutability, PragmaDirective, SourceUnit,
-    SourceUnitPart, Statement, Type, VariableDefinition, VersionComparator, VersionOp, Visibility,
+    FunctionAttribute, FunctionDefinition, FunctionTy, Import, Loc, Mutability, PragmaDirective,
+    SourceUnit, SourceUnitPart, Statement, StructDefinition, Type, VariableDefinition,
+    VersionComparator, VersionOp, Visibility,
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -761,6 +762,82 @@ pub fn extract_contract_events(contract_def: &ContractDefinition) -> Vec<EventIn
         .collect()
 }
 
+/// Extract struct information from a struct definition
+pub fn extract_struct_info(struct_def: &StructDefinition) -> StructInfo {
+    let name = struct_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let fields = struct_def
+        .fields
+        .iter()
+        .map(|field| StructField {
+            name: field.name.as_ref().map(|id| id.name.clone()),
+            type_name: extract_type_name(&field.ty),
+        })
+        .collect();
+
+    StructInfo { name, fields }
+}
+
+/// Extract structs from a contract definition
+pub fn extract_contract_structs(contract_def: &ContractDefinition) -> Vec<StructInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::StructDefinition(struct_def) = part {
+                Some(extract_struct_info(struct_def))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Extract modifier information from a modifier definition
+pub fn extract_modifier_info(modifier_def: &FunctionDefinition) -> ModifierInfo {
+    let name = modifier_def
+        .name
+        .as_ref()
+        .map(|id| id.name.clone())
+        .unwrap_or_else(|| "Unnamed".to_string());
+
+    let parameters = modifier_def
+        .params
+        .iter()
+        .filter_map(|(_, param_opt)| {
+            param_opt.as_ref().map(|param| ModifierParameter {
+                name: param.name.as_ref().map(|id| id.name.clone()),
+                type_name: extract_type_name(&param.ty),
+            })
+        })
+        .collect();
+
+    ModifierInfo { name, parameters }
+}
+
+/// Extract modifiers from a contract definition
+pub fn extract_contract_modifiers(contract_def: &ContractDefinition) -> Vec<ModifierInfo> {
+    contract_def
+        .parts
+        .iter()
+        .filter_map(|part| {
+            if let ContractPart::FunctionDefinition(func_def) = part {
+                if matches!(func_def.ty, FunctionTy::Modifier) {
+                    Some(extract_modifier_info(func_def))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Extract information from a single contract definition
 pub fn extract_contract_info(
     contract_def: &ContractDefinition,
@@ -813,6 +890,12 @@ pub fn extract_contract_info(
     // Extract events
     let events = extract_contract_events(contract_def);
 
+    // Extract structs
+    let structs = extract_contract_structs(contract_def);
+
+    // Extract modifiers
+    let modifiers = extract_contract_modifiers(contract_def);
+
     Ok(ContractInfo {
         name: name.name.clone(),
         contract_type,
@@ -824,6 +907,8 @@ pub fn extract_contract_info(
         enums,
         errors,
         events,
+        structs,
+        modifiers,
     })
 }
 
