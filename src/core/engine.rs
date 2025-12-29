@@ -171,6 +171,9 @@ impl AnalysisEngine {
             crate::detectors::gas::DefaultValueInitializationDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::InternalFunctionNotCalledDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::LongRevertStringDetector::default(),
         ));
         self.register_detector(Arc::new(

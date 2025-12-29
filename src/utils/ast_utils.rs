@@ -562,6 +562,129 @@ pub fn collect_local_declarations(stmt: &Statement, local_vars: &mut HashSet<Str
     }
 }
 
+/// Collect all function call names from a statement
+pub fn collect_function_calls(stmt: &Statement, calls: &mut HashSet<String>) {
+    match stmt {
+        Statement::Block { statements, .. } => {
+            for s in statements {
+                collect_function_calls(s, calls);
+            }
+        }
+        Statement::Expression(_, expr)
+        | Statement::Return(_, Some(expr))
+        | Statement::Emit(_, expr) => {
+            collect_function_calls_from_expr(expr, calls);
+        }
+        Statement::VariableDefinition(_, _, Some(expr)) => {
+            collect_function_calls_from_expr(expr, calls);
+        }
+        Statement::If(_, cond, then_stmt, else_stmt) => {
+            collect_function_calls_from_expr(cond, calls);
+            collect_function_calls(then_stmt, calls);
+            if let Some(else_s) = else_stmt {
+                collect_function_calls(else_s, calls);
+            }
+        }
+        Statement::While(_, cond, body) | Statement::DoWhile(_, body, cond) => {
+            collect_function_calls_from_expr(cond, calls);
+            collect_function_calls(body, calls);
+        }
+        Statement::For(_, init, cond, update, body) => {
+            if let Some(init_stmt) = init {
+                collect_function_calls(init_stmt, calls);
+            }
+            if let Some(cond_expr) = cond {
+                collect_function_calls_from_expr(cond_expr, calls);
+            }
+            if let Some(update_expr) = update {
+                collect_function_calls_from_expr(update_expr, calls);
+            }
+            if let Some(body_stmt) = body {
+                collect_function_calls(body_stmt, calls);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Collect function call names from an expression
+pub fn collect_function_calls_from_expr(expr: &Expression, calls: &mut HashSet<String>) {
+    match expr {
+        Expression::FunctionCall(_, func_expr, args) => {
+            // Collect the function name if it's a simple identifier
+            if let Expression::Variable(ident) = func_expr.as_ref() {
+                calls.insert(ident.name.clone());
+            }
+            // Recurse into the function expression and arguments
+            collect_function_calls_from_expr(func_expr, calls);
+            for arg in args {
+                collect_function_calls_from_expr(arg, calls);
+            }
+        }
+        // Unary operations
+        Expression::MemberAccess(_, expr, _)
+        | Expression::Not(_, expr)
+        | Expression::BitwiseNot(_, expr)
+        | Expression::UnaryPlus(_, expr)
+        | Expression::PreIncrement(_, expr)
+        | Expression::PreDecrement(_, expr)
+        | Expression::PostIncrement(_, expr)
+        | Expression::PostDecrement(_, expr) => {
+            collect_function_calls_from_expr(expr, calls);
+        }
+        Expression::Negate(_, expr) => {
+            collect_function_calls_from_expr(expr, calls);
+        }
+        // Binary operations
+        Expression::Add(_, l, r)
+        | Expression::Subtract(_, l, r)
+        | Expression::Multiply(_, l, r)
+        | Expression::Divide(_, l, r)
+        | Expression::Modulo(_, l, r)
+        | Expression::Power(_, l, r)
+        | Expression::ShiftLeft(_, l, r)
+        | Expression::ShiftRight(_, l, r)
+        | Expression::BitwiseAnd(_, l, r)
+        | Expression::BitwiseOr(_, l, r)
+        | Expression::BitwiseXor(_, l, r)
+        | Expression::Equal(_, l, r)
+        | Expression::NotEqual(_, l, r)
+        | Expression::Less(_, l, r)
+        | Expression::LessEqual(_, l, r)
+        | Expression::More(_, l, r)
+        | Expression::MoreEqual(_, l, r)
+        | Expression::And(_, l, r)
+        | Expression::Or(_, l, r)
+        | Expression::Assign(_, l, r)
+        | Expression::AssignAdd(_, l, r)
+        | Expression::AssignSubtract(_, l, r)
+        | Expression::AssignMultiply(_, l, r)
+        | Expression::AssignDivide(_, l, r)
+        | Expression::AssignModulo(_, l, r)
+        | Expression::AssignShiftLeft(_, l, r)
+        | Expression::AssignShiftRight(_, l, r)
+        | Expression::AssignOr(_, l, r)
+        | Expression::AssignAnd(_, l, r)
+        | Expression::AssignXor(_, l, r) => {
+            collect_function_calls_from_expr(l, calls);
+            collect_function_calls_from_expr(r, calls);
+        }
+        Expression::ConditionalOperator(_, cond, then_expr, else_expr) => {
+            collect_function_calls_from_expr(cond, calls);
+            collect_function_calls_from_expr(then_expr, calls);
+            collect_function_calls_from_expr(else_expr, calls);
+        }
+        Expression::ArraySubscript(_, base, index) => {
+            collect_function_calls_from_expr(base, calls);
+            if let Some(idx) = index {
+                collect_function_calls_from_expr(idx, calls);
+            }
+        }
+        // Literals and identifiers don't contain calls
+        _ => {}
+    }
+}
+
 /// Process a single import directive
 pub fn process_import_directive(import: &Import, file: &SolidityFile) -> Result<ImportInfo, String> {
     use solang_parser::pt::ImportPath;
