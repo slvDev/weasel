@@ -119,7 +119,9 @@ impl AnalysisEngine {
         ));
 
         // Low severity detectors
-        // not implemented
+        self.register_detector(Arc::new(
+            crate::detectors::low::TwoStepOwnershipTransferDetector::default(),
+        ));
 
         // Gas detectors
         self.register_detector(Arc::new(

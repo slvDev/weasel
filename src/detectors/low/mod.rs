@@ -1,0 +1,3 @@
+pub mod two_step_ownership_transfer;
+
+pub use two_step_ownership_transfer::TwoStepOwnershipTransferDetector;
