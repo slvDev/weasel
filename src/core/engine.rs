@@ -183,6 +183,9 @@ impl AnalysisEngine {
             crate::detectors::gas::PrivateConstantsDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::ShiftInsteadOfMulDivDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::ShouldBeImmutableDetector::default(),
         ));
 
