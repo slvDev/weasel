@@ -176,6 +176,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::gas::PayableFunctionDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::gas::ShouldBeImmutableDetector::default(),
+        ));
 
         // NC detectors
         self.register_detector(Arc::new(
