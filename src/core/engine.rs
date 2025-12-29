@@ -189,6 +189,9 @@ impl AnalysisEngine {
             crate::detectors::gas::SplitRequireDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::SuperfluousEventFieldsDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::ShouldBeImmutableDetector::default(),
         ));
 
