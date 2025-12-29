@@ -1,7 +1,7 @@
 use crate::models::severity::Severity;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Location {
     pub file: String,
     pub line: usize,

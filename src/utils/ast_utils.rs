@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::path::Path;
 
 use crate::{
     models::{
@@ -14,8 +13,8 @@ use crate::{
 use solang_parser::pt::{
     ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition, EventDefinition, Expression,
     FunctionAttribute, FunctionDefinition, FunctionTy, Import, Loc, Mutability, PragmaDirective,
-    SourceUnit, SourceUnitPart, Statement, StructDefinition, Type, TypeDefinition, Using,
-    UsingList, VariableDefinition, VersionComparator, VersionOp, Visibility,
+    Statement, StructDefinition, Type, TypeDefinition, Using, UsingList, VariableDefinition,
+    VersionComparator, VersionOp, Visibility,
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -563,35 +562,22 @@ pub fn collect_local_declarations(stmt: &Statement, local_vars: &mut HashSet<Str
     }
 }
 
-pub fn extract_imports(source_unit: &SourceUnit) -> Result<Vec<ImportInfo>, String> {
-    let mut imports = Vec::new();
-
-    for part in &source_unit.0 {
-        if let SourceUnitPart::ImportDirective(import) = part {
-            let import_info = process_import_directive(import)?;
-            imports.push(import_info);
-        }
-    }
-
-    Ok(imports)
-}
-
 /// Process a single import directive
-pub fn process_import_directive(import: &Import) -> Result<ImportInfo, String> {
+pub fn process_import_directive(import: &Import, file: &SolidityFile) -> Result<ImportInfo, String> {
     use solang_parser::pt::ImportPath;
 
-    // Extract import path and symbols based on import type
-    let (path_literal, symbols) = match import {
-        Import::Plain(literal, _loc) => {
+    // Extract import path, symbols, and location based on import type
+    let (path_literal, symbols, import_loc) = match import {
+        Import::Plain(literal, loc) => {
             // Simple import without specific symbols: import "hardhat/console.sol";
-            (Some(literal), Vec::new())
+            (Some(literal), Vec::new(), loc)
         }
-        Import::GlobalSymbol(literal, symbol, _loc) => {
+        Import::GlobalSymbol(literal, symbol, loc) => {
             // Import with global symbol: import <0> as <1>;
             let symbols = vec![symbol.name.clone()];
-            (Some(literal), symbols)
+            (Some(literal), symbols, loc)
         }
-        Import::Rename(literal, symbol_list, _loc) => {
+        Import::Rename(literal, symbol_list, loc) => {
             // Import with renamed symbols: import { console2 as console } from "forge-std/console2.sol";
             let symbols = symbol_list
                 .iter()
@@ -603,7 +589,7 @@ pub fn process_import_directive(import: &Import) -> Result<ImportInfo, String> {
                         .unwrap_or_else(|| original.name.clone())
                 })
                 .collect();
-            (Some(literal), symbols)
+            (Some(literal), symbols, loc)
         }
     };
 
@@ -614,7 +600,10 @@ pub fn process_import_directive(import: &Import) -> Result<ImportInfo, String> {
         return Err("Invalid import path format".to_string());
     };
 
+    let loc = loc_to_location(import_loc, file);
+
     Ok(ImportInfo {
+        loc,
         import_path,
         resolved_path: None, // Will be resolved later if needed
         symbols,
@@ -674,25 +663,10 @@ pub fn extract_solidity_version_from_pragma(pragma: &PragmaDirective) -> Option<
     }
 }
 
-/// Extract contract information from source unit
-fn extract_contracts(
-    source_unit: &SourceUnit,
-    file_path: &Path,
-) -> Result<Vec<ContractInfo>, String> {
-    let mut contracts = Vec::new();
-
-    for part in &source_unit.0 {
-        if let SourceUnitPart::ContractDefinition(contract_def) = part {
-            let contract_info = extract_contract_info(contract_def, file_path)?;
-            contracts.push(contract_info);
-        }
-    }
-
-    Ok(contracts)
-}
-
 /// Extract variable information from a variable definition
-pub fn extract_variable_info(var_def: &VariableDefinition) -> StateVariableInfo {
+pub fn extract_variable_info(var_def: &VariableDefinition, file: &SolidityFile) -> StateVariableInfo {
+    let loc = loc_to_location(&var_def.loc, file);
+
     let name = var_def
         .name
         .as_ref()
@@ -737,6 +711,7 @@ pub fn extract_variable_info(var_def: &VariableDefinition) -> StateVariableInfo 
     };
 
     StateVariableInfo {
+        loc,
         name,
         type_name,
         visibility,
@@ -747,13 +722,13 @@ pub fn extract_variable_info(var_def: &VariableDefinition) -> StateVariableInfo 
 }
 
 /// Extract state variables from a contract definition
-pub fn extract_state_variables(contract_def: &ContractDefinition) -> Vec<StateVariableInfo> {
+pub fn extract_state_variables(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<StateVariableInfo> {
     contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::VariableDefinition(var_def) = part {
-                Some(extract_variable_info(var_def))
+                Some(extract_variable_info(var_def, file))
             } else {
                 None
             }
@@ -762,7 +737,9 @@ pub fn extract_state_variables(contract_def: &ContractDefinition) -> Vec<StateVa
 }
 
 /// Extract enum information from an enum definition
-pub fn extract_enum_info(enum_def: &EnumDefinition) -> EnumInfo {
+pub fn extract_enum_info(enum_def: &EnumDefinition, file: &SolidityFile) -> EnumInfo {
+    let loc = loc_to_location(&enum_def.loc, file);
+
     let name = enum_def
         .name
         .as_ref()
@@ -775,17 +752,21 @@ pub fn extract_enum_info(enum_def: &EnumDefinition) -> EnumInfo {
         .filter_map(|value| value.as_ref().map(|id| id.name.clone()))
         .collect();
 
-    EnumInfo { name, values }
+    EnumInfo {
+        loc,
+        name,
+        values,
+    }
 }
 
 /// Extract enums from a contract definition
-pub fn extract_contract_enums(contract_def: &ContractDefinition) -> Vec<EnumInfo> {
+pub fn extract_contract_enums(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<EnumInfo> {
     contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::EnumDefinition(enum_def) = part {
-                Some(extract_enum_info(enum_def))
+                Some(extract_enum_info(enum_def, file))
             } else {
                 None
             }
@@ -823,7 +804,9 @@ fn extract_simple_expr(expr: &Expression) -> String {
 }
 
 /// Extract error information from an error definition
-pub fn extract_error_info(error_def: &ErrorDefinition) -> ErrorInfo {
+pub fn extract_error_info(error_def: &ErrorDefinition, file: &SolidityFile) -> ErrorInfo {
+    let loc = loc_to_location(&error_def.loc, file);
+
     let name = error_def
         .name
         .as_ref()
@@ -839,17 +822,21 @@ pub fn extract_error_info(error_def: &ErrorDefinition) -> ErrorInfo {
         })
         .collect();
 
-    ErrorInfo { name, parameters }
+    ErrorInfo {
+        loc,
+        name,
+        parameters,
+    }
 }
 
 /// Extract errors from a contract definition
-pub fn extract_contract_errors(contract_def: &ContractDefinition) -> Vec<ErrorInfo> {
+pub fn extract_contract_errors(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<ErrorInfo> {
     contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::ErrorDefinition(error_def) = part {
-                Some(extract_error_info(error_def))
+                Some(extract_error_info(error_def, file))
             } else {
                 None
             }
@@ -858,7 +845,9 @@ pub fn extract_contract_errors(contract_def: &ContractDefinition) -> Vec<ErrorIn
 }
 
 /// Extract event information from an event definition
-pub fn extract_event_info(event_def: &EventDefinition) -> EventInfo {
+pub fn extract_event_info(event_def: &EventDefinition, file: &SolidityFile) -> EventInfo {
+    let loc = loc_to_location(&event_def.loc, file);
+
     let name = event_def
         .name
         .as_ref()
@@ -876,6 +865,7 @@ pub fn extract_event_info(event_def: &EventDefinition) -> EventInfo {
         .collect();
 
     EventInfo {
+        loc,
         name,
         parameters,
         anonymous: event_def.anonymous,
@@ -883,13 +873,13 @@ pub fn extract_event_info(event_def: &EventDefinition) -> EventInfo {
 }
 
 /// Extract events from a contract definition
-pub fn extract_contract_events(contract_def: &ContractDefinition) -> Vec<EventInfo> {
+pub fn extract_contract_events(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<EventInfo> {
     contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::EventDefinition(event_def) = part {
-                Some(extract_event_info(event_def))
+                Some(extract_event_info(event_def, file))
             } else {
                 None
             }
@@ -898,7 +888,9 @@ pub fn extract_contract_events(contract_def: &ContractDefinition) -> Vec<EventIn
 }
 
 /// Extract struct information from a struct definition
-pub fn extract_struct_info(struct_def: &StructDefinition) -> StructInfo {
+pub fn extract_struct_info(struct_def: &StructDefinition, file: &SolidityFile) -> StructInfo {
+    let loc = loc_to_location(&struct_def.loc, file);
+
     let name = struct_def
         .name
         .as_ref()
@@ -914,17 +906,21 @@ pub fn extract_struct_info(struct_def: &StructDefinition) -> StructInfo {
         })
         .collect();
 
-    StructInfo { name, fields }
+    StructInfo {
+        loc,
+        name,
+        fields,
+    }
 }
 
 /// Extract structs from a contract definition
-pub fn extract_contract_structs(contract_def: &ContractDefinition) -> Vec<StructInfo> {
+pub fn extract_contract_structs(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<StructInfo> {
     contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::StructDefinition(struct_def) = part {
-                Some(extract_struct_info(struct_def))
+                Some(extract_struct_info(struct_def, file))
             } else {
                 None
             }
@@ -933,7 +929,9 @@ pub fn extract_contract_structs(contract_def: &ContractDefinition) -> Vec<Struct
 }
 
 /// Extract modifier information from a modifier definition
-pub fn extract_modifier_info(modifier_def: &FunctionDefinition) -> ModifierInfo {
+pub fn extract_modifier_info(modifier_def: &FunctionDefinition, file: &SolidityFile) -> ModifierInfo {
+    let loc = loc_to_location(&modifier_def.loc, file);
+
     let name = modifier_def
         .name
         .as_ref()
@@ -951,18 +949,22 @@ pub fn extract_modifier_info(modifier_def: &FunctionDefinition) -> ModifierInfo 
         })
         .collect();
 
-    ModifierInfo { name, parameters }
+    ModifierInfo {
+        loc,
+        name,
+        parameters,
+    }
 }
 
 /// Extract modifiers from a contract definition
-pub fn extract_contract_modifiers(contract_def: &ContractDefinition) -> Vec<ModifierInfo> {
+pub fn extract_contract_modifiers(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<ModifierInfo> {
     contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::FunctionDefinition(func_def) = part {
                 if matches!(func_def.ty, FunctionTy::Modifier) {
-                    Some(extract_modifier_info(func_def))
+                    Some(extract_modifier_info(func_def, file))
                 } else {
                     None
                 }
@@ -974,24 +976,26 @@ pub fn extract_contract_modifiers(contract_def: &ContractDefinition) -> Vec<Modi
 }
 
 /// Extract type definition information from a type definition
-pub fn extract_type_definition_info(type_def: &TypeDefinition) -> TypeDefinitionInfo {
+pub fn extract_type_definition_info(type_def: &TypeDefinition, file: &SolidityFile) -> TypeDefinitionInfo {
+    let loc = loc_to_location(&type_def.loc, file);
     let name = type_def.name.name.clone();
     let underlying_type = extract_type_name(&type_def.ty);
 
     TypeDefinitionInfo {
+        loc,
         name,
         underlying_type,
     }
 }
 
 /// Extract type definitions from a contract definition
-pub fn extract_contract_type_definitions(contract_def: &ContractDefinition) -> Vec<TypeDefinitionInfo> {
+pub fn extract_contract_type_definitions(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<TypeDefinitionInfo> {
     contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::TypeDefinition(type_def) = part {
-                Some(extract_type_definition_info(type_def))
+                Some(extract_type_definition_info(type_def, file))
             } else {
                 None
             }
@@ -1000,7 +1004,8 @@ pub fn extract_contract_type_definitions(contract_def: &ContractDefinition) -> V
 }
 
 /// Extract using directive information from a using directive
-pub fn extract_using_directive_info(using: &Using) -> UsingDirectiveInfo {
+pub fn extract_using_directive_info(using: &Using, file: &SolidityFile) -> UsingDirectiveInfo {
+    let loc = loc_to_location(&using.loc, file);
     let mut library_name = None;
     let mut functions = Vec::new();
 
@@ -1020,6 +1025,7 @@ pub fn extract_using_directive_info(using: &Using) -> UsingDirectiveInfo {
     let target_type = using.ty.as_ref().map(|ty| extract_type_name(ty));
 
     UsingDirectiveInfo {
+        loc,
         library_name,
         functions,
         target_type,
@@ -1027,13 +1033,13 @@ pub fn extract_using_directive_info(using: &Using) -> UsingDirectiveInfo {
 }
 
 /// Extract using directives from a contract definition
-pub fn extract_contract_using_directives(contract_def: &ContractDefinition) -> Vec<UsingDirectiveInfo> {
+pub fn extract_contract_using_directives(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<UsingDirectiveInfo> {
     contract_def
         .parts
         .iter()
         .filter_map(|part| {
             if let ContractPart::Using(using) = part {
-                Some(extract_using_directive_info(using))
+                Some(extract_using_directive_info(using, file))
             } else {
                 None
             }
@@ -1042,7 +1048,9 @@ pub fn extract_contract_using_directives(contract_def: &ContractDefinition) -> V
 }
 
 /// Extract function information from a function definition
-pub fn extract_function_info(func_def: &FunctionDefinition) -> FunctionInfo {
+pub fn extract_function_info(func_def: &FunctionDefinition, file: &SolidityFile) -> FunctionInfo {
+    let loc = loc_to_location(&func_def.loc, file);
+
     // Extract function name
     let name = func_def
         .name
@@ -1137,6 +1145,7 @@ pub fn extract_function_info(func_def: &FunctionDefinition) -> FunctionInfo {
         .any(|attr| matches!(attr, FunctionAttribute::Override(_, _)));
 
     FunctionInfo {
+        loc,
         name,
         parameters,
         return_parameters,
@@ -1149,11 +1158,21 @@ pub fn extract_function_info(func_def: &FunctionDefinition) -> FunctionInfo {
     }
 }
 
+/// Get pre-extracted ContractInfo for a ContractDefinition
+pub fn get_contract_info<'a>(
+    contract_def: &ContractDefinition,
+    file: &'a SolidityFile,
+) -> Option<&'a ContractInfo> {
+    let name = contract_def.name.as_ref()?.name.as_str();
+    file.contract_definitions.iter().find(|c| c.name == name)
+}
+
 /// Extract information from a single contract definition
 pub fn extract_contract_info(
     contract_def: &ContractDefinition,
-    file_path: &Path,
+    file: &SolidityFile,
 ) -> Result<ContractInfo, String> {
+    let loc = loc_to_location(&contract_def.loc, file);
     let name = contract_def.name.as_ref().ok_or("Unnamed contract found")?;
 
     let contract_type = match contract_def.ty {
@@ -1177,7 +1196,7 @@ pub fn extract_contract_info(
         .collect();
 
     // Extract state variables
-    let state_variables = extract_state_variables(contract_def);
+    let state_variables = extract_state_variables(contract_def, file);
 
     // Extract function definitions (exclude modifiers as they are extracted separately)
     let function_definitions = contract_def
@@ -1187,7 +1206,7 @@ pub fn extract_contract_info(
             if let ContractPart::FunctionDefinition(func_def) = part {
                 // Skip modifiers - they are extracted separately
                 if !matches!(func_def.ty, FunctionTy::Modifier) {
-                    Some(extract_function_info(func_def))
+                    Some(extract_function_info(func_def, file))
                 } else {
                     None
                 }
@@ -1198,30 +1217,31 @@ pub fn extract_contract_info(
         .collect();
 
     // Extract enums
-    let enums = extract_contract_enums(contract_def);
+    let enums = extract_contract_enums(contract_def, file);
 
     // Extract errors
-    let errors = extract_contract_errors(contract_def);
+    let errors = extract_contract_errors(contract_def, file);
 
     // Extract events
-    let events = extract_contract_events(contract_def);
+    let events = extract_contract_events(contract_def, file);
 
     // Extract structs
-    let structs = extract_contract_structs(contract_def);
+    let structs = extract_contract_structs(contract_def, file);
 
     // Extract modifiers
-    let modifiers = extract_contract_modifiers(contract_def);
+    let modifiers = extract_contract_modifiers(contract_def, file);
 
     // Extract type definitions
-    let type_definitions = extract_contract_type_definitions(contract_def);
+    let type_definitions = extract_contract_type_definitions(contract_def, file);
 
     // Extract using directives
-    let using_directives = extract_contract_using_directives(contract_def);
+    let using_directives = extract_contract_using_directives(contract_def, file);
 
     Ok(ContractInfo {
+        loc,
         name: name.name.clone(),
         contract_type,
-        file_path: file_path.to_string_lossy().to_string(),
+        file_path: file.path.to_string_lossy().to_string(),
         direct_bases,
         inheritance_chain: Vec::new(), // Will be populated in second pass
         state_variables,

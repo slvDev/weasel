@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use solang_parser::pt::{ContractTy, SourceUnit, SourceUnitPart};
 use std::path::PathBuf;
 
+use crate::models::finding::Location;
 use crate::utils::ast_utils::{
     extract_contract_info, extract_enum_info, extract_error_info, extract_event_info,
     extract_function_info, extract_solidity_version_from_pragma, extract_struct_info,
@@ -67,59 +68,86 @@ impl SolidityFile {
     }
 
     pub fn extract_metadata(&mut self) {
-        for part in &self.source_unit.0 {
+        let metadata = Self::collect_metadata(&self.source_unit, self);
+
+        self.solidity_version = metadata.solidity_version;
+        self.imports = metadata.imports;
+        self.contract_definitions = metadata.contract_definitions;
+        self.enums = metadata.enums;
+        self.errors = metadata.errors;
+        self.events = metadata.events;
+        self.structs = metadata.structs;
+        self.type_definitions = metadata.type_definitions;
+        self.using_directives = metadata.using_directives;
+        self.variables = metadata.variables;
+        self.functions = metadata.functions;
+    }
+
+    fn collect_metadata(source_unit: &SourceUnit, file: &SolidityFile) -> FileMetadata {
+        let mut metadata = FileMetadata::default();
+
+        for part in &source_unit.0 {
             match part {
                 SourceUnitPart::PragmaDirective(pragma) => {
                     if let Some(version) = extract_solidity_version_from_pragma(pragma) {
-                        self.solidity_version = Some(version);
+                        metadata.solidity_version = Some(version);
                     }
                 }
                 SourceUnitPart::ImportDirective(import) => {
-                    if let Ok(import_info) = process_import_directive(import) {
-                        self.imports.push(import_info);
+                    if let Ok(import_info) = process_import_directive(import, file) {
+                        metadata.imports.push(import_info);
                     }
                 }
                 SourceUnitPart::ContractDefinition(contract_def) => {
-                    if let Ok(contract) = extract_contract_info(contract_def, &self.path) {
-                        self.contract_definitions.push(contract);
+                    if let Ok(contract) = extract_contract_info(contract_def, file) {
+                        metadata.contract_definitions.push(contract);
                     }
                 }
                 SourceUnitPart::EnumDefinition(enum_def) => {
-                    let enum_info = extract_enum_info(enum_def);
-                    self.enums.push(enum_info);
+                    metadata.enums.push(extract_enum_info(enum_def, file));
                 }
                 SourceUnitPart::ErrorDefinition(error_def) => {
-                    let error_info = extract_error_info(error_def);
-                    self.errors.push(error_info);
+                    metadata.errors.push(extract_error_info(error_def, file));
                 }
                 SourceUnitPart::EventDefinition(event_def) => {
-                    let event_info = extract_event_info(event_def);
-                    self.events.push(event_info);
+                    metadata.events.push(extract_event_info(event_def, file));
                 }
                 SourceUnitPart::StructDefinition(struct_def) => {
-                    let struct_info = extract_struct_info(struct_def);
-                    self.structs.push(struct_info);
+                    metadata.structs.push(extract_struct_info(struct_def, file));
                 }
                 SourceUnitPart::TypeDefinition(type_def) => {
-                    let type_info = extract_type_definition_info(type_def);
-                    self.type_definitions.push(type_info);
+                    metadata.type_definitions.push(extract_type_definition_info(type_def, file));
                 }
                 SourceUnitPart::Using(using) => {
-                    let using_info = extract_using_directive_info(using);
-                    self.using_directives.push(using_info);
+                    metadata.using_directives.push(extract_using_directive_info(using, file));
                 }
                 SourceUnitPart::VariableDefinition(var_def) => {
-                    let var_info = extract_variable_info(var_def);
-                    self.variables.push(var_info);
+                    metadata.variables.push(extract_variable_info(var_def, file));
                 }
                 SourceUnitPart::FunctionDefinition(func_def) => {
-                    let func_info = extract_function_info(func_def);
-                    self.functions.push(func_info);
+                    metadata.functions.push(extract_function_info(func_def, file));
                 }
                 _ => {}
             }
         }
+
+        metadata
     }
+}
+
+#[derive(Default)]
+struct FileMetadata {
+    solidity_version: Option<String>,
+    imports: Vec<ImportInfo>,
+    contract_definitions: Vec<ContractInfo>,
+    enums: Vec<EnumInfo>,
+    errors: Vec<ErrorInfo>,
+    events: Vec<EventInfo>,
+    structs: Vec<StructInfo>,
+    type_definitions: Vec<TypeDefinitionInfo>,
+    using_directives: Vec<UsingDirectiveInfo>,
+    variables: Vec<StateVariableInfo>,
+    functions: Vec<FunctionInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -144,6 +172,7 @@ impl From<&ContractTy> for ContractType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ContractInfo {
+    pub loc: Location,
     pub name: String,
     pub contract_type: ContractType,
     pub file_path: String,
@@ -162,6 +191,7 @@ pub struct ContractInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportInfo {
+    pub loc: Location,
     pub import_path: String,
     pub resolved_path: Option<PathBuf>,
     pub symbols: Vec<String>,
@@ -169,12 +199,14 @@ pub struct ImportInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EnumInfo {
+    pub loc: Location,
     pub name: String,
     pub values: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ErrorInfo {
+    pub loc: Location,
     pub name: String,
     pub parameters: Vec<ErrorParameter>,
 }
@@ -187,6 +219,7 @@ pub struct ErrorParameter {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EventInfo {
+    pub loc: Location,
     pub name: String,
     pub parameters: Vec<EventParameter>,
     pub anonymous: bool,
@@ -201,6 +234,7 @@ pub struct EventParameter {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StructInfo {
+    pub loc: Location,
     pub name: String,
     pub fields: Vec<StructField>,
 }
@@ -213,6 +247,7 @@ pub struct StructField {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ModifierInfo {
+    pub loc: Location,
     pub name: String,
     pub parameters: Vec<ModifierParameter>,
 }
@@ -225,12 +260,14 @@ pub struct ModifierParameter {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TypeDefinitionInfo {
+    pub loc: Location,
     pub name: String,
     pub underlying_type: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UsingDirectiveInfo {
+    pub loc: Location,
     pub library_name: Option<String>,
     pub functions: Vec<String>,
     pub target_type: Option<String>,
@@ -238,6 +275,7 @@ pub struct UsingDirectiveInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StateVariableInfo {
+    pub loc: Location,
     pub name: String,
     pub type_name: String,
     pub visibility: VariableVisibility,
@@ -263,6 +301,7 @@ pub enum VariableMutability {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FunctionInfo {
+    pub loc: Location,
     pub name: String,
     pub parameters: Vec<FunctionParameter>,
     pub return_parameters: Vec<FunctionParameter>,
