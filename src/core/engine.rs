@@ -203,6 +203,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::gas::Uint256ToBoolMappingDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::gas::WethAddressDefinitionDetector::default(),
+        ));
 
         // NC detectors
         self.register_detector(Arc::new(

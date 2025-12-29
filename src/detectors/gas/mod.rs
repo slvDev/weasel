@@ -25,6 +25,7 @@ pub mod unnecessary_variable_cache;
 pub mod unsafe_array_access;
 pub mod should_be_immutable;
 pub mod use_erc721a;
+pub mod weth_address_definition;
 
 pub use address_zero_check::AddressZeroCheckDetector;
 pub use array_compound_assignment::ArrayCompoundAssignmentDetector;
@@ -53,3 +54,4 @@ pub use unnecessary_variable_cache::UnnecessaryVariableCacheDetector;
 pub use unsafe_array_access::UnsafeArrayAccessDetector;
 pub use should_be_immutable::ShouldBeImmutableDetector;
 pub use use_erc721a::UseErc721aDetector;
+pub use weth_address_definition::WethAddressDefinitionDetector;

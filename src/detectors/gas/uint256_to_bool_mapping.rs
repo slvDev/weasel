@@ -49,10 +49,11 @@ BitMaps.BitMap private claimedBitmap;
     fn register_callbacks(self: Arc<Self>, visitor: &mut ASTVisitor) {
         visitor.on_variable(move |var, file, _context| {
             if Self::is_uint256_to_bool_mapping(&var.ty) {
-                return vec![FindingData {
+                return FindingData {
                     detector_id: self.id(),
                     location: loc_to_location(&var.ty.loc(), file),
-                }];
+                }
+                .into();
             }
             Vec::new()
         });
