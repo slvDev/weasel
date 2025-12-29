@@ -198,6 +198,9 @@ impl AnalysisEngine {
             crate::detectors::gas::ThisUsageDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::UintGtZeroDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::Uint256ToBoolMappingDetector::default(),
         ));
 
