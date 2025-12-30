@@ -144,6 +144,9 @@ impl AnalysisEngine {
             crate::detectors::low::EcrecoverMalleabilityDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::EmptyFunctionBodyDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::Erc20DecimalsDetector::default(),
         ));
         self.register_detector(Arc::new(

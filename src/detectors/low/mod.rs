@@ -6,6 +6,7 @@ pub mod deprecated_setup_role;
 pub mod domain_separator_replay;
 pub mod duplicate_import;
 pub mod ecrecover_malleability;
+pub mod empty_function_body;
 pub mod erc20_decimals;
 pub mod two_step_ownership_transfer;
 
@@ -17,5 +18,6 @@ pub use deprecated_setup_role::DeprecatedSetupRoleDetector;
 pub use domain_separator_replay::DomainSeparatorReplayDetector;
 pub use duplicate_import::DuplicateImportDetector;
 pub use ecrecover_malleability::EcrecoverMalleabilityDetector;
+pub use empty_function_body::EmptyFunctionBodyDetector;
 pub use erc20_decimals::Erc20DecimalsDetector;
 pub use two_step_ownership_transfer::TwoStepOwnershipTransferDetector;
