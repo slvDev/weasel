@@ -10,6 +10,7 @@ pub mod empty_function_body;
 pub mod erc20_decimals;
 pub mod external_call_in_loop;
 pub mod two_step_ownership_transfer;
+pub mod unlimited_gas_call;
 
 pub use curve_calc_token_amount::CurveCalcTokenAmountDetector;
 pub use decimals_type::DecimalsTypeDetector;
@@ -23,3 +24,4 @@ pub use empty_function_body::EmptyFunctionBodyDetector;
 pub use erc20_decimals::Erc20DecimalsDetector;
 pub use external_call_in_loop::ExternalCallInLoopDetector;
 pub use two_step_ownership_transfer::TwoStepOwnershipTransferDetector;
+pub use unlimited_gas_call::UnlimitedGasCallDetector;

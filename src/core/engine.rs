@@ -155,6 +155,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::low::TwoStepOwnershipTransferDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::low::UnlimitedGasCallDetector::default(),
+        ));
 
         // Gas detectors
         self.register_detector(Arc::new(
