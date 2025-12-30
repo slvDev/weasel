@@ -135,6 +135,9 @@ impl AnalysisEngine {
             crate::detectors::low::DeprecatedSetupRoleDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::DomainSeparatorReplayDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::EcrecoverMalleabilityDetector::default(),
         ));
         self.register_detector(Arc::new(

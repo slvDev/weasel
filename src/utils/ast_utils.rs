@@ -365,6 +365,8 @@ fn find_in_expression_recursive<F>(
         | Expression::LessEqual(_, left, right)
         | Expression::More(_, left, right)
         | Expression::MoreEqual(_, left, right)
+        | Expression::Equal(_, left, right)
+        | Expression::NotEqual(_, left, right)
         | Expression::Add(_, left, right)
         | Expression::Subtract(_, left, right)
         | Expression::Multiply(_, left, right)
