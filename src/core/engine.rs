@@ -129,6 +129,12 @@ impl AnalysisEngine {
             crate::detectors::low::DeprecatedApproveDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::DeprecatedSafeApproveDetector::default(),
+        ));
+        self.register_detector(Arc::new(
+            crate::detectors::low::DeprecatedSetupRoleDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::EcrecoverMalleabilityDetector::default(),
         ));
         self.register_detector(Arc::new(
