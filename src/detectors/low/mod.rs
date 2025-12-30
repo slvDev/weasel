@@ -9,6 +9,7 @@ pub mod ecrecover_malleability;
 pub mod empty_function_body;
 pub mod erc20_decimals;
 pub mod external_call_in_loop;
+pub mod fallback_lacking_payable;
 pub mod two_step_ownership_transfer;
 pub mod unlimited_gas_call;
 
@@ -23,5 +24,6 @@ pub use ecrecover_malleability::EcrecoverMalleabilityDetector;
 pub use empty_function_body::EmptyFunctionBodyDetector;
 pub use erc20_decimals::Erc20DecimalsDetector;
 pub use external_call_in_loop::ExternalCallInLoopDetector;
+pub use fallback_lacking_payable::FallbackLackingPayableDetector;
 pub use two_step_ownership_transfer::TwoStepOwnershipTransferDetector;
 pub use unlimited_gas_call::UnlimitedGasCallDetector;

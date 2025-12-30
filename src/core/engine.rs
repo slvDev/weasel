@@ -153,6 +153,9 @@ impl AnalysisEngine {
             crate::detectors::low::ExternalCallInLoopDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::FallbackLackingPayableDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::TwoStepOwnershipTransferDetector::default(),
         ));
         self.register_detector(Arc::new(
