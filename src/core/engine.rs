@@ -123,6 +123,9 @@ impl AnalysisEngine {
             crate::detectors::low::CurveCalcTokenAmountDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::DecimalsTypeDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::EcrecoverMalleabilityDetector::default(),
         ));
         self.register_detector(Arc::new(
