@@ -150,6 +150,9 @@ impl AnalysisEngine {
             crate::detectors::low::Erc20DecimalsDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::ExternalCallInLoopDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::TwoStepOwnershipTransferDetector::default(),
         ));
 
