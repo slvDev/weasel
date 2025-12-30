@@ -126,6 +126,9 @@ impl AnalysisEngine {
             crate::detectors::low::DecimalsTypeDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::DeprecatedAbiEncoderV2Detector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::DeprecatedApproveDetector::default(),
         ));
         self.register_detector(Arc::new(

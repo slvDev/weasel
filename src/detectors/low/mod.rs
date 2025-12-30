@@ -1,5 +1,6 @@
 pub mod curve_calc_token_amount;
 pub mod decimals_type;
+pub mod deprecated_abi_encoder_v2;
 pub mod deprecated_approve;
 pub mod deprecated_safe_approve;
 pub mod deprecated_setup_role;
@@ -17,6 +18,7 @@ pub mod unlimited_gas_call;
 
 pub use curve_calc_token_amount::CurveCalcTokenAmountDetector;
 pub use decimals_type::DecimalsTypeDetector;
+pub use deprecated_abi_encoder_v2::DeprecatedAbiEncoderV2Detector;
 pub use deprecated_approve::DeprecatedApproveDetector;
 pub use deprecated_safe_approve::DeprecatedSafeApproveDetector;
 pub use deprecated_setup_role::DeprecatedSetupRoleDetector;
