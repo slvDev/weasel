@@ -17,6 +17,7 @@ pub mod lack_of_slippage_check;
 pub mod missing_zero_address_validation;
 pub mod two_step_ownership_transfer;
 pub mod unlimited_gas_call;
+pub mod unsafe_abi_encode_packed;
 
 pub use curve_calc_token_amount::CurveCalcTokenAmountDetector;
 pub use decimals_type::DecimalsTypeDetector;
@@ -37,3 +38,4 @@ pub use lack_of_slippage_check::LackOfSlippageCheckDetector;
 pub use missing_zero_address_validation::MissingZeroAddressValidationDetector;
 pub use two_step_ownership_transfer::TwoStepOwnershipTransferDetector;
 pub use unlimited_gas_call::UnlimitedGasCallDetector;
+pub use unsafe_abi_encode_packed::UnsafeAbiEncodePackedDetector;
