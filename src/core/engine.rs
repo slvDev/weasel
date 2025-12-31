@@ -120,6 +120,9 @@ impl AnalysisEngine {
 
         // Low severity detectors
         self.register_detector(Arc::new(
+            crate::detectors::low::BlockTimestampDeadlineDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::CurveCalcTokenAmountDetector::default(),
         ));
         self.register_detector(Arc::new(

@@ -1,3 +1,4 @@
+pub mod block_timestamp_deadline;
 pub mod curve_calc_token_amount;
 pub mod decimals_type;
 pub mod deprecated_abi_encoder_v2;
@@ -21,6 +22,7 @@ pub mod uninitialized_implementation;
 pub mod unlimited_gas_call;
 pub mod unsafe_abi_encode_packed;
 
+pub use block_timestamp_deadline::BlockTimestampDeadlineDetector;
 pub use curve_calc_token_amount::CurveCalcTokenAmountDetector;
 pub use decimals_type::DecimalsTypeDetector;
 pub use deprecated_abi_encoder_v2::DeprecatedAbiEncoderV2Detector;
