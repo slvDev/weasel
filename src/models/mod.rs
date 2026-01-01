@@ -9,7 +9,7 @@ pub use scope::{
     ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter,
     FunctionInfo, FunctionMutability, FunctionParameter, FunctionType, FunctionVisibility,
     ImportInfo, ModifierInfo, ModifierParameter, ScopeFiles, SolidityFile, StateVariableInfo,
-    StructField, StructInfo, TypeDefinitionInfo, UsingDirectiveInfo, VariableMutability,
+    StructField, StructInfo, TypeDefinitionInfo, TypeInfo, UsingDirectiveInfo, VariableMutability,
     VariableVisibility,
 };
 pub use severity::Severity;

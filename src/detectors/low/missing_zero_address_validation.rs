@@ -1,9 +1,9 @@
 use crate::detectors::Detector;
-use crate::models::finding::Location;
 use crate::models::severity::Severity;
+use crate::models::{FindingData, Location, SolidityFile, TypeInfo};
 use crate::utils::ast_utils::{find_locations_in_statement, get_contract_info};
-use crate::{core::visitor::ASTVisitor, models::FindingData};
-use solang_parser::pt::{ContractPart, Expression, Statement};
+use crate::core::visitor::ASTVisitor;
+use solang_parser::pt::{ContractPart, Expression, Loc, Statement};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -65,7 +65,7 @@ contract Test {
             let address_state_vars: HashSet<String> = contract_info
                 .state_variables
                 .iter()
-                .filter(|v| v.type_name.to_lowercase().contains("address"))
+                .filter(|v| matches!(v.type_info, TypeInfo::Address | TypeInfo::AddressPayable))
                 .map(|v| v.name.clone())
                 .collect();
 
@@ -81,7 +81,7 @@ contract Test {
                         continue;
                     };
 
-                    let mut predicate = |expr: &Expression, _file_ref: &crate::models::scope::SolidityFile| -> Option<solang_parser::pt::Loc> {
+                    let mut predicate = |expr: &Expression, _file_ref: &SolidityFile| -> Option<Loc> {
                         if let Expression::Assign(loc, left, right) = expr {
                             // Check if left side is an address state variable
                             if let Expression::Variable(left_id) = left.as_ref() {

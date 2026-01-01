@@ -2,19 +2,15 @@ use std::collections::HashSet;
 
 use crate::{
     models::{
-        finding::{FindingData, Location},
-        ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter,
-        FunctionInfo, FunctionMutability, FunctionParameter, FunctionType, FunctionVisibility,
-        ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StateVariableInfo, StructField,
-        StructInfo, TypeDefinitionInfo, UsingDirectiveInfo, VariableMutability, VariableVisibility,
+        ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter, FunctionInfo, FunctionMutability, FunctionParameter, FunctionType, FunctionVisibility, ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StateVariableInfo, StructField, StructInfo, TypeDefinitionInfo, TypeInfo, UsingDirectiveInfo, VariableMutability, VariableVisibility, finding::{FindingData, Location}
     },
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{
     ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition, EventDefinition, Expression,
     FunctionAttribute, FunctionDefinition, FunctionTy, Import, Loc, Mutability, PragmaDirective,
-    Statement, StructDefinition, Type, TypeDefinition, Using, UsingList, VariableDefinition,
-    VersionComparator, VersionOp, Visibility,
+    Statement, StructDefinition, Type, TypeDefinition, Using, UsingList, VariableDeclaration,
+    VariableDefinition, VersionComparator, VersionOp, Visibility,
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -530,35 +526,45 @@ pub fn get_local_variable_names(func_def: &FunctionDefinition, body: &Statement)
     local_vars
 }
 
-/// Recursively collect local variable declaration names from a statement
+/// Collect local variable declaration names from a statement
 pub fn collect_local_declarations(stmt: &Statement, local_vars: &mut HashSet<String>) {
+    collect_local_variables(stmt, &mut |decl| {
+        if let Some(name) = &decl.name {
+            local_vars.insert(name.name.clone());
+        }
+    });
+}
+
+/// The callback receives the full VariableDeclaration and can extract any needed info.
+pub fn collect_local_variables<F>(stmt: &Statement, callback: &mut F)
+where
+    F: FnMut(&VariableDeclaration),
+{
     match stmt {
         Statement::VariableDefinition(_, decl, _) => {
-            if let Some(name) = &decl.name {
-                local_vars.insert(name.name.clone());
-            }
+            callback(decl);
         }
         Statement::Block { statements, .. } => {
             for s in statements {
-                collect_local_declarations(s, local_vars);
+                collect_local_variables(s, callback);
             }
         }
         Statement::If(_, _, then_stmt, else_stmt) => {
-            collect_local_declarations(then_stmt, local_vars);
+            collect_local_variables(then_stmt, callback);
             if let Some(else_s) = else_stmt {
-                collect_local_declarations(else_s, local_vars);
+                collect_local_variables(else_s, callback);
             }
         }
         Statement::For(_, init, _, _, body_opt) => {
             if let Some(init_stmt) = init {
-                collect_local_declarations(init_stmt, local_vars);
+                collect_local_variables(init_stmt, callback);
             }
             if let Some(body) = body_opt {
-                collect_local_declarations(body, local_vars);
+                collect_local_variables(body, callback);
             }
         }
         Statement::While(_, _, body) | Statement::DoWhile(_, body, _) => {
-            collect_local_declarations(body, local_vars);
+            collect_local_variables(body, callback);
         }
         _ => {}
     }
@@ -798,7 +804,7 @@ pub fn extract_variable_info(var_def: &VariableDefinition, file: &SolidityFile) 
         .map(|id| id.name.clone())
         .unwrap_or_else(|| "Unnamed".to_string());
 
-    let type_name = extract_type_name(&var_def.ty);
+    let type_info = TypeInfo::from_expression(&var_def.ty);
 
     // Determine visibility from attrs
     let visibility = var_def
@@ -838,7 +844,7 @@ pub fn extract_variable_info(var_def: &VariableDefinition, file: &SolidityFile) 
     StateVariableInfo {
         loc,
         name,
-        type_name,
+        type_info,
         visibility,
         mutability,
         is_constant,

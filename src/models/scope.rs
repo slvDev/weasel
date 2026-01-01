@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
-use solang_parser::pt::{ContractTy, SourceUnit, SourceUnitPart};
+use solang_parser::pt::{ContractTy, Expression, SourceUnit, SourceUnitPart, Type};
+use std::fmt;
 use std::path::PathBuf;
 
 use crate::models::finding::Location;
@@ -274,10 +275,137 @@ pub struct UsingDirectiveInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TypeInfo {
+    Address,
+    AddressPayable,
+    Payable,
+    Bool,
+    String,
+    Int(u16),
+    Uint(u16),
+    Bytes(u8),
+    Rational,
+    DynamicBytes,
+    Mapping {
+        key: Box<TypeInfo>,
+        value: Box<TypeInfo>,
+    },
+    Array {
+        base: Box<TypeInfo>,
+        size: Option<u64>,
+    },
+    UserDefined(String),
+    Function,
+    Unknown,
+}
+
+impl TypeInfo {
+    pub fn from_solang_type(ty: &Type) -> Self {
+        match ty {
+            Type::Address => TypeInfo::Address,
+            Type::AddressPayable => TypeInfo::AddressPayable,
+            Type::Payable => TypeInfo::Payable,
+            Type::Bool => TypeInfo::Bool,
+            Type::String => TypeInfo::String,
+            Type::Int(size) => TypeInfo::Int(*size),
+            Type::Uint(size) => TypeInfo::Uint(*size),
+            Type::Bytes(size) => TypeInfo::Bytes(*size),
+            Type::Rational => TypeInfo::Rational,
+            Type::DynamicBytes => TypeInfo::DynamicBytes,
+            Type::Mapping { key, value, .. } => {
+                let key_type = Box::new(TypeInfo::from_expression(key));
+                let value_type = Box::new(TypeInfo::from_expression(value));
+                TypeInfo::Mapping {
+                    key: key_type,
+                    value: value_type,
+                }
+            }
+            Type::Function { .. } => TypeInfo::Function,
+        }
+    }
+
+    /// Convert from Expression to TypeInfo
+    pub fn from_expression(expr: &Expression) -> Self {
+        match expr {
+            Expression::Type(_, ty) => TypeInfo::from_solang_type(ty),
+            Expression::Variable(ident) => TypeInfo::UserDefined(ident.name.clone()),
+            Expression::MemberAccess(_, base, member) => {
+                // Handle namespaced types like LibraryName.StructName
+                let base_str = match base.as_ref() {
+                    Expression::Variable(id) => id.name.as_str(),
+                    _ => return TypeInfo::Unknown,
+                };
+                TypeInfo::UserDefined(format!("{}.{}", base_str, member.name))
+            }
+            Expression::ArraySubscript(_, base, size_expr) => {
+                let base_type = Box::new(TypeInfo::from_expression(base));
+                let size = size_expr.as_ref().and_then(|expr| {
+                    // Try to extract numeric literal from size expression
+                    if let Expression::NumberLiteral(_, val, _, _) = expr.as_ref() {
+                        val.parse::<u64>().ok()
+                    } else {
+                        None
+                    }
+                });
+                TypeInfo::Array {
+                    base: base_type,
+                    size,
+                }
+            }
+            _ => TypeInfo::Unknown,
+        }
+    }
+
+    pub fn is_int(&self) -> bool {
+        matches!(self, TypeInfo::Int(_))
+    }
+
+    pub fn is_uint(&self) -> bool {
+        matches!(self, TypeInfo::Uint(_))
+    }
+
+    pub fn is_address(&self) -> bool {
+        matches!(self, TypeInfo::Address | TypeInfo::AddressPayable)
+    }
+
+    pub fn is_bytes(&self) -> bool {
+        matches!(self, TypeInfo::Bytes(_) | TypeInfo::DynamicBytes)
+    }
+}
+
+impl fmt::Display for TypeInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeInfo::Address => write!(f, "address"),
+            TypeInfo::AddressPayable => write!(f, "address payable"),
+            TypeInfo::Payable => write!(f, "payable"),
+            TypeInfo::Bool => write!(f, "bool"),
+            TypeInfo::String => write!(f, "string"),
+            TypeInfo::Int(size) => write!(f, "int{}", size),
+            TypeInfo::Uint(size) => write!(f, "uint{}", size),
+            TypeInfo::Bytes(size) => write!(f, "bytes{}", size),
+            TypeInfo::Rational => write!(f, "fixed"),
+            TypeInfo::DynamicBytes => write!(f, "bytes"),
+            TypeInfo::Mapping { key, value } => write!(f, "mapping({} => {})", key, value),
+            TypeInfo::Array { base, size } => {
+                if let Some(s) = size {
+                    write!(f, "{}[{}]", base, s)
+                } else {
+                    write!(f, "{}[]", base)
+                }
+            }
+            TypeInfo::UserDefined(name) => write!(f, "{}", name),
+            TypeInfo::Function => write!(f, "function"),
+            TypeInfo::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StateVariableInfo {
     pub loc: Location,
     pub name: String,
-    pub type_name: String,
+    pub type_info: TypeInfo,
     pub visibility: VariableVisibility,
     pub mutability: VariableMutability,
     pub is_constant: bool,

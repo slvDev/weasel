@@ -2,7 +2,7 @@ use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
 use crate::models::finding::Location;
 use crate::models::severity::Severity;
-use crate::models::{FindingData, SolidityFile, StateVariableInfo, VariableMutability};
+use crate::models::{FindingData, SolidityFile, StateVariableInfo, TypeInfo, VariableMutability};
 use crate::utils::ast_utils::{find_locations_in_statement, get_contract_info};
 use solang_parser::pt::{ContractPart, Expression, FunctionTy, Loc, Statement};
 use std::collections::{HashMap, HashSet};
@@ -128,8 +128,10 @@ impl ShouldBeImmutableDetector {
         }
 
         // Types that cannot be immutable: mappings, strings, bytes, dynamic arrays
-        let t = &info.type_name;
-        !t.starts_with("Mapping") && t != "String" && t != "DynamicBytes" && !t.ends_with("[]")
+        !matches!(
+            info.type_info,
+            TypeInfo::Mapping { .. } | TypeInfo::String | TypeInfo::DynamicBytes | TypeInfo::Array { .. }
+        )
     }
 
     /// Check if variable is assigned in statement
