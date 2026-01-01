@@ -186,6 +186,12 @@ impl AnalysisEngine {
             crate::detectors::low::UnsafeAbiEncodePackedDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::UnsafeIntCastDetector::default(),
+        ));
+        self.register_detector(Arc::new(
+            crate::detectors::low::UnsafeIntToUintCastDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::UninitializedImplementationDetector::default(),
         ));
 

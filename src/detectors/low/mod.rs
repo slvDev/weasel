@@ -21,6 +21,8 @@ pub mod two_step_ownership_transfer;
 pub mod uninitialized_implementation;
 pub mod unlimited_gas_call;
 pub mod unsafe_abi_encode_packed;
+pub mod unsafe_int_cast;
+pub mod unsafe_int_to_uint_cast;
 
 pub use block_timestamp_deadline::BlockTimestampDeadlineDetector;
 pub use curve_calc_token_amount::CurveCalcTokenAmountDetector;
@@ -45,3 +47,5 @@ pub use two_step_ownership_transfer::TwoStepOwnershipTransferDetector;
 pub use uninitialized_implementation::UninitializedImplementationDetector;
 pub use unlimited_gas_call::UnlimitedGasCallDetector;
 pub use unsafe_abi_encode_packed::UnsafeAbiEncodePackedDetector;
+pub use unsafe_int_cast::UnsafeIntCastDetector;
+pub use unsafe_int_to_uint_cast::UnsafeIntToUintCastDetector;
