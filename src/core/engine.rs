@@ -240,6 +240,9 @@ impl AnalysisEngine {
             crate::detectors::low::UninitializedUpgradeableDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::Year365DaysDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::ZeroValueTransferDetector::default(),
         ));
 
