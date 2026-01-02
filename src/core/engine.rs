@@ -367,6 +367,9 @@ impl AnalysisEngine {
             crate::detectors::nc::TypeMaxValueDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::UppercaseNonConstantDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::WhileTrueLoopDetector::default(),
         ));
         self.register_detector(Arc::new(
