@@ -218,6 +218,9 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::low::UninitializedImplementationDetector::default(),
         ));
+        self.register_detector(Arc::new(
+            crate::detectors::low::ZeroValueTransferDetector::default(),
+        ));
 
         // Gas detectors
         self.register_detector(Arc::new(
