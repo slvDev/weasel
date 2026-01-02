@@ -201,6 +201,9 @@ impl AnalysisEngine {
             crate::detectors::low::RenounceWhilePausedDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::SweepTokenAccountingDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::TwoStepOwnershipTransferDetector::default(),
         ));
         self.register_detector(Arc::new(
