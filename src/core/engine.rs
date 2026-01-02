@@ -183,6 +183,9 @@ impl AnalysisEngine {
             crate::detectors::low::InitializerFrontrunDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::InitializerOnInternalDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::LackOfSlippageCheckDetector::default(),
         ));
         self.register_detector(Arc::new(
