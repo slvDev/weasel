@@ -395,6 +395,9 @@ impl AnalysisEngine {
             crate::detectors::nc::FunctionLengthDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::HardcodedAddressDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::InterfaceInSeparateFileDetector::default(),
         ));
         self.register_detector(Arc::new(
