@@ -481,6 +481,104 @@ fn find_in_statement_recursive<F>(
     }
 }
 
+/// Find statement types matching a predicate (e.g., Return, Revert statements)
+/// Returns Vec<FindingData> for matching statements
+pub fn find_statement_types<F>(
+    stmt: &Statement,
+    file: &SolidityFile,
+    detector_id: &'static str,
+    mut predicate: F,
+) -> Vec<FindingData>
+where
+    F: FnMut(&Statement) -> bool,
+{
+    let mut findings = Vec::new();
+    find_statement_types_recursive(stmt, file, detector_id, &mut predicate, &mut findings);
+    findings
+}
+
+fn find_statement_types_recursive<F>(
+    stmt: &Statement,
+    file: &SolidityFile,
+    detector_id: &'static str,
+    predicate: &mut F,
+    findings: &mut Vec<FindingData>,
+) where
+    F: FnMut(&Statement) -> bool,
+{
+    // Check current statement against predicate
+    if predicate(stmt) {
+        if let Some(loc) = get_statement_location(stmt) {
+            findings.push(FindingData {
+                detector_id,
+                location: loc_to_location(&loc, file),
+            });
+        }
+    }
+
+    // Recursively check child statements
+    match stmt {
+        Statement::Block { statements, .. } => {
+            for inner_stmt in statements {
+                find_statement_types_recursive(inner_stmt, file, detector_id, predicate, findings);
+            }
+        }
+        Statement::If(_, _, then_stmt, else_stmt_opt) => {
+            find_statement_types_recursive(then_stmt, file, detector_id, predicate, findings);
+            if let Some(else_stmt) = else_stmt_opt {
+                find_statement_types_recursive(else_stmt, file, detector_id, predicate, findings);
+            }
+        }
+        Statement::While(_, _, body) | Statement::DoWhile(_, body, _) => {
+            find_statement_types_recursive(body, file, detector_id, predicate, findings);
+        }
+        Statement::For(_, init_opt, _, _, body_opt) => {
+            if let Some(init) = init_opt {
+                find_statement_types_recursive(init, file, detector_id, predicate, findings);
+            }
+            if let Some(body) = body_opt {
+                find_statement_types_recursive(body, file, detector_id, predicate, findings);
+            }
+        }
+        Statement::Try(_, _, returns_opt, catch_clauses) => {
+            if let Some((_, returns_block)) = returns_opt {
+                find_statement_types_recursive(returns_block, file, detector_id, predicate, findings);
+            }
+            for clause in catch_clauses {
+                let clause_stmt = match clause {
+                    CatchClause::Simple(_, _, s) => s,
+                    CatchClause::Named(_, _, _, s) => s,
+                };
+                find_statement_types_recursive(clause_stmt, file, detector_id, predicate, findings);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Helper function to get location from any statement
+fn get_statement_location(stmt: &Statement) -> Option<Loc> {
+    match stmt {
+        Statement::Block { loc, .. }
+        | Statement::Assembly { loc, .. }
+        | Statement::Args(loc, _)
+        | Statement::If(loc, _, _, _)
+        | Statement::While(loc, _, _)
+        | Statement::Expression(loc, _)
+        | Statement::VariableDefinition(loc, _, _)
+        | Statement::For(loc, _, _, _, _)
+        | Statement::DoWhile(loc, _, _)
+        | Statement::Continue(loc)
+        | Statement::Break(loc)
+        | Statement::Return(loc, _)
+        | Statement::Revert(loc, _, _)
+        | Statement::RevertNamedArgs(loc, _, _)
+        | Statement::Emit(loc, _)
+        | Statement::Try(loc, _, _, _)
+        | Statement::Error(loc) => Some(*loc),
+    }
+}
+
 /// Helper function to get location from any expression
 fn get_expression_location(expr: &Expression) -> Option<Loc> {
     match expr {
