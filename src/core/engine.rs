@@ -386,6 +386,9 @@ impl AnalysisEngine {
             crate::detectors::nc::FunctionLengthDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::InterfaceNamingDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::ExplicitNumTypesDetector::default(),
         ));
     }
