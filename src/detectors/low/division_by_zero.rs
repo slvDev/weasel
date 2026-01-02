@@ -1,9 +1,8 @@
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::models::{FindingData, SolidityFile};
-use crate::utils::ast_utils::find_locations_in_statement;
+use crate::utils::ast_utils::find_in_statement;
 use crate::core::visitor::ASTVisitor;
-use solang_parser::pt::{Expression, Loc, Statement};
+use solang_parser::pt::{Expression, Statement};
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
@@ -52,32 +51,18 @@ function divide(uint256 a, uint256 b) public pure returns (uint256) {
                 return Vec::new();
             };
 
-            let mut findings = Vec::new();
-            let mut predicate = |expr: &Expression, _file: &SolidityFile| -> Option<Loc> {
+            find_in_statement(body, file, self.id(), |expr| {
                 match expr {
-                    Expression::Divide(loc, _left, right) | Expression::Modulo(loc, _left, right) => {
+                    Expression::Divide(_, _, right) | Expression::Modulo(_, _, right) => {
                         if let Some(var_name) = Self::get_variable_name(right.as_ref()) {
-                            if !Self::find_zero_validation(body, var_name) {
-                                return Some(loc.clone());
-                            }
-                        } else if Self::is_potentially_zero(right.as_ref()) {
-                            return Some(loc.clone());
+                            !Self::find_zero_validation(body, var_name)
+                        } else {
+                            Self::is_potentially_zero(right.as_ref())
                         }
                     }
-                    _ => {}
+                    _ => false,
                 }
-                None
-            };
-
-            find_locations_in_statement(body, file, &mut predicate, &mut findings);
-
-            findings
-                .into_iter()
-                .map(|loc| FindingData {
-                    detector_id: self.id(),
-                    location: loc,
-                })
-                .collect()
+            })
         });
     }
 }

@@ -7,10 +7,10 @@ use crate::{
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{
-    ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition, EventDefinition, Expression,
-    FunctionAttribute, FunctionDefinition, FunctionTy, Import, Loc, Mutability, PragmaDirective,
-    Statement, StructDefinition, Type, TypeDefinition, Using, UsingList, VariableDeclaration,
-    VariableDefinition, VersionComparator, VersionOp, Visibility,
+    CatchClause, ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition, EventDefinition,
+    Expression, FunctionAttribute, FunctionDefinition, FunctionTy, Import, Loc, Mutability,
+    PragmaDirective, Statement, StructDefinition, Type, TypeDefinition, Using, UsingList,
+    VariableDeclaration, VariableDefinition, VersionComparator, VersionOp, Visibility,
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -452,6 +452,29 @@ fn find_in_statement_recursive<F>(
             }
             if let Some(body) = body_opt {
                 find_in_statement_recursive(body, file, detector_id, predicate, findings);
+            }
+        }
+        Statement::Return(_, expr_opt) => {
+            if let Some(expr) = expr_opt {
+                find_in_expression_recursive(expr, file, detector_id, predicate, findings);
+            }
+        }
+        Statement::Emit(_, expr) => {
+            find_in_expression_recursive(expr, file, detector_id, predicate, findings);
+        }
+        Statement::Revert(_, _, exprs) => {
+            for expr in exprs {
+                find_in_expression_recursive(expr, file, detector_id, predicate, findings);
+            }
+        }
+        Statement::Try(_, expr, _, catch_clauses) => {
+            find_in_expression_recursive(expr, file, detector_id, predicate, findings);
+            for clause in catch_clauses {
+                let stmt = match clause {
+                    CatchClause::Simple(_, _, stmt) => stmt,
+                    CatchClause::Named(_, _, _, stmt) => stmt,
+                };
+                find_in_statement_recursive(stmt, file, detector_id, predicate, findings);
             }
         }
         _ => {}

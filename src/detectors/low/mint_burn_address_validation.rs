@@ -1,9 +1,8 @@
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::models::{FindingData, SolidityFile};
-use crate::utils::ast_utils::find_locations_in_statement;
+use crate::utils::ast_utils::find_in_statement;
 use crate::core::visitor::ASTVisitor;
-use solang_parser::pt::{Expression, Loc, Statement, Type};
+use solang_parser::pt::{Expression, Statement, Type};
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
@@ -53,37 +52,21 @@ function mintTokens(address to, uint256 amount) public {
                 return Vec::new();
             };
 
-            let mut findings = Vec::new();
-            let mut predicate = |expr: &Expression, _file: &SolidityFile| -> Option<Loc> {
-                if let Expression::FunctionCall(loc, func, args) = expr {
-                    let func_name = Self::get_function_name(func.as_ref());
-
-                    if let Some(name) = func_name {
+            find_in_statement(body, file, self.id(), |expr| {
+                if let Expression::FunctionCall(_, func, args) = expr {
+                    if let Some(name) = Self::get_function_name(func.as_ref()) {
                         let name_lower = name.to_lowercase();
                         if name_lower.contains("mint") || name_lower.contains("burn") {
-                            // Check first argument
                             if let Some(first_arg) = args.first() {
                                 if let Some(var_name) = Self::get_variable_name(first_arg) {
-                                    if !Self::find_address_validation(body, var_name) {
-                                        return Some(loc.clone());
-                                    }
+                                    return !Self::find_address_validation(body, var_name);
                                 }
                             }
                         }
                     }
                 }
-                None
-            };
-
-            find_locations_in_statement(body, file, &mut predicate, &mut findings);
-
-            findings
-                .into_iter()
-                .map(|loc| FindingData {
-                    detector_id: self.id(),
-                    location: loc,
-                })
-                .collect()
+                false
+            })
         });
     }
 }
