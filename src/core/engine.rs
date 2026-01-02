@@ -186,6 +186,9 @@ impl AnalysisEngine {
             crate::detectors::low::MissingZeroAddressValidationDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::NftHardForkDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::TwoStepOwnershipTransferDetector::default(),
         ));
         self.register_detector(Arc::new(
