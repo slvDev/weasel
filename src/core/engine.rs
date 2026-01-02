@@ -192,6 +192,9 @@ impl AnalysisEngine {
             crate::detectors::low::MintBurnAddressValidationDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::MissingGapStorageDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::MissingZeroAddressValidationDetector::default(),
         ));
         self.register_detector(Arc::new(
