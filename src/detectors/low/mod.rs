@@ -1,3 +1,4 @@
+pub mod assembly_optimizer_bug;
 pub mod block_timestamp_deadline;
 pub mod curve_calc_token_amount;
 pub mod decimals_type;
@@ -31,6 +32,7 @@ pub mod unsafe_abi_encode_packed;
 pub mod unsafe_int_cast;
 pub mod unsafe_int_to_uint_cast;
 
+pub use assembly_optimizer_bug::AssemblyOptimizerBugDetector;
 pub use block_timestamp_deadline::BlockTimestampDeadlineDetector;
 pub use curve_calc_token_amount::CurveCalcTokenAmountDetector;
 pub use decimals_type::DecimalsTypeDetector;
