@@ -141,6 +141,9 @@ impl AnalysisEngine {
             crate::detectors::low::DeprecatedSetupRoleDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::DivisionBeforeMultiplicationDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::DivisionByZeroDetector::default(),
         ));
         self.register_detector(Arc::new(
