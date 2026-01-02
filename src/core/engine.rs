@@ -147,6 +147,9 @@ impl AnalysisEngine {
             crate::detectors::low::DivisionByZeroDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::DivisionRoundingDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::DomainSeparatorReplayDetector::default(),
         ));
         self.register_detector(Arc::new(
