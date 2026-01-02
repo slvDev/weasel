@@ -234,6 +234,9 @@ impl AnalysisEngine {
             crate::detectors::low::UninitializedImplementationDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::UninitializedUpgradeableDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::ZeroValueTransferDetector::default(),
         ));
 
