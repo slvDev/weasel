@@ -213,6 +213,9 @@ impl AnalysisEngine {
             crate::detectors::low::UnlimitedGasCallDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::UnspecificPragmaDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::UnsafeAbiEncodePackedDetector::default(),
         ));
         self.register_detector(Arc::new(
