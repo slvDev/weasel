@@ -352,6 +352,9 @@ impl AnalysisEngine {
             crate::detectors::nc::MagicNumberDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::NamedMappingsDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::TwoStepCriticalChangesDetector::default(),
         ));
         self.register_detector(Arc::new(
