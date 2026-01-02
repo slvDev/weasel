@@ -17,6 +17,7 @@ pub mod prefer_require;
 pub mod redundant_else;
 pub mod renounce_ownership;
 pub mod two_step_critical_changes;
+pub mod type_max_literal;
 pub mod type_max_value;
 pub mod while_true_loop;
 
@@ -39,5 +40,6 @@ pub use prefer_require::PreferRequireDetector;
 pub use redundant_else::RedundantElseDetector;
 pub use renounce_ownership::RenounceOwnershipDetector;
 pub use two_step_critical_changes::TwoStepCriticalChangesDetector;
+pub use type_max_literal::TypeMaxLiteralDetector;
 pub use type_max_value::TypeMaxValueDetector;
 pub use while_true_loop::WhileTrueLoopDetector;
