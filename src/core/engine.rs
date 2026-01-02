@@ -192,6 +192,9 @@ impl AnalysisEngine {
             crate::detectors::low::NftHardForkDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::Push0OpcodeDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::RenounceWhilePausedDetector::default(),
         ));
         self.register_detector(Arc::new(
