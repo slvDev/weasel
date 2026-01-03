@@ -170,6 +170,10 @@ mod tests {
         let detector = Arc::new(SetterNoCheckDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
         assert_eq!(locations.len(), 4);
+        assert_eq!(locations[0].line, 6, "setOwner");
+        assert_eq!(locations[1].line, 10, "updateValue");
+        assert_eq!(locations[2].line, 14, "changeAdmin");
+        assert_eq!(locations[3].line, 18, "resetCounter");
     }
 
     #[test]

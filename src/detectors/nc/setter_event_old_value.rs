@@ -1,22 +1,20 @@
 use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::models::FindingData;
 use crate::utils::ast_utils::find_statement_types;
-use crate::utils::location::loc_to_location;
-use solang_parser::pt::{FunctionAttribute, FunctionTy, Statement, Visibility};
+use solang_parser::pt::{Expression, FunctionAttribute, FunctionTy, Statement, Visibility};
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
-pub struct MissingEventSetterDetector;
+pub struct SetterEventOldValueDetector;
 
-impl Detector for MissingEventSetterDetector {
+impl Detector for SetterEventOldValueDetector {
     fn id(&self) -> &'static str {
-        "missing-event-setter"
+        "setter-event-old-value"
     }
 
     fn name(&self) -> &str {
-        "Missing event for critical parameter change"
+        "Setter event should contain both old and new value"
     }
 
     fn severity(&self) -> Severity {
@@ -24,25 +22,29 @@ impl Detector for MissingEventSetterDetector {
     }
 
     fn description(&self) -> &str {
-        "Setter functions that modify critical parameters should emit events. Events help \
-         off-chain tools track changes and prevent users from being surprised by changes."
+        "Events that mark critical parameter changes should contain both the old and the new \
+         value. This is especially important when the new value is not required to be different \
+         from the old value."
     }
 
     fn example(&self) -> Option<String> {
         Some(
             r#"```solidity
 // Bad
+event OwnerSet(address indexed newOwner);
+
 function setOwner(address newOwner) external {
     owner = newOwner;
+    emit OwnerSet(newOwner);
 }
 
 // Good
-event OwnerUpdated(address indexed oldOwner, address indexed newOwner);
+event OwnerSet(address indexed oldOwner, address indexed newOwner);
 
 function setOwner(address newOwner) external {
     address oldOwner = owner;
     owner = newOwner;
-    emit OwnerUpdated(oldOwner, newOwner);
+    emit OwnerSet(oldOwner, newOwner);
 }
 ```"#
                 .to_string(),
@@ -63,14 +65,8 @@ function setOwner(address newOwner) external {
                 None => return Vec::new(),
             };
 
-            let is_setter = name.starts_with("set")
-                || name.starts_with("update")
-                || name.starts_with("change")
-                || name.starts_with("reset")
-                || name.starts_with("modify")
-                || name.starts_with("configure");
-
-            if !is_setter {
+            // Only check functions starting with set or update
+            if !name.starts_with("set") && !name.starts_with("update") {
                 return Vec::new();
             }
 
@@ -108,19 +104,15 @@ function setOwner(address newOwner) external {
                 return Vec::new();
             };
 
-            let emits = find_statement_types(body, file, self.id(), |stmt| {
-                matches!(stmt, Statement::Emit(_, _))
-            });
-
-            if !emits.is_empty() {
-                return Vec::new();
-            }
-
-            FindingData {
-                detector_id: self.id(),
-                location: loc_to_location(&func_def.loc, file),
-            }
-            .into()
+            // Find emit statements with only 1 argument (missing old value)
+            find_statement_types(body, file, self.id(), |stmt| {
+                if let Statement::Emit(_, expr) = stmt {
+                    if let Expression::FunctionCall(_, _, args) = expr {
+                        return args.len() == 1;
+                    }
+                }
+                false
+            })
         });
     }
 }
@@ -131,46 +123,30 @@ mod tests {
     use crate::utils::test_utils::run_detector_on_code;
 
     #[test]
-    fn test_detects_missing_events() {
+    fn test_detects_single_arg_emit() {
         let code = r#"
             contract Test {
                 address owner;
                 uint256 value;
+                event OwnerSet(address newOwner);
+                event ValueUpdated(uint256 newValue);
 
                 function setOwner(address newOwner) external {
                     owner = newOwner;
+                    emit OwnerSet(newOwner);
                 }
 
                 function updateValue(uint256 newValue) public {
                     value = newValue;
-                }
-
-                function changeOwner(address newOwner) external {
-                    owner = newOwner;
-                }
-
-                function resetValue() public {
-                    value = 0;
-                }
-
-                function modifySettings(uint256 v) external {
-                    value = v;
-                }
-
-                function configureParams(uint256 v) external {
-                    value = v;
+                    emit ValueUpdated(newValue);
                 }
             }
         "#;
-        let detector = Arc::new(MissingEventSetterDetector::default());
+        let detector = Arc::new(SetterEventOldValueDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
-        assert_eq!(locations.len(), 6);
-        assert_eq!(locations[0].line, 6, "setOwner");
-        assert_eq!(locations[1].line, 10, "updateValue");
-        assert_eq!(locations[2].line, 14, "changeOwner");
-        assert_eq!(locations[3].line, 18, "resetValue");
-        assert_eq!(locations[4].line, 22, "modifySettings");
-        assert_eq!(locations[5].line, 26, "configureParams");
+        assert_eq!(locations.len(), 2);
+        assert_eq!(locations[0].line, 10, "emit OwnerSet(newOwner)");
+        assert_eq!(locations[1].line, 15, "emit ValueUpdated(newValue)");
     }
 
     #[test]
@@ -179,48 +155,34 @@ mod tests {
             contract Test {
                 address owner;
 
-                event OwnerSet(address indexed newOwner);
+                event OwnerSet(address oldOwner, address newOwner);
+                event OwnerSetSingle(address newOwner);
 
                 function setOwner(address newOwner) external {
+                    address oldOwner = owner;
                     owner = newOwner;
-                    emit OwnerSet(newOwner);
+                    emit OwnerSet(oldOwner, newOwner);
+                }
+
+                function setOwnerNoEvent(address newOwner) external {
+                    owner = newOwner;
                 }
 
                 function _setInternal(address a) internal {
-                    owner = a;
+                    emit OwnerSetSingle(a);
                 }
 
-                function _setPrivate(address a) private {
-                    owner = a;
-                }
-
-                function getValue() public view returns (uint256) {
-                    return 0;
-                }
-
-                function getOwner() public pure returns (address) {
-                    return address(0);
+                function transferOwner(address newOwner) external {
+                    owner = newOwner;
+                    emit OwnerSetSingle(newOwner);
                 }
 
                 function setVirtual(address a) external virtual {
-                    owner = a;
-                }
-
-                constructor() {
-                    owner = msg.sender;
-                }
-
-                // Not setters - "set" in middle of word
-                function processAsset(uint256 v) external {
-                    owner = address(0);
-                }
-
-                function calculateOffset(uint256 v) external {
-                    owner = address(0);
+                    emit OwnerSetSingle(a);
                 }
             }
         "#;
-        let detector = Arc::new(MissingEventSetterDetector::default());
+        let detector = Arc::new(SetterEventOldValueDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
         assert_eq!(locations.len(), 0);
     }
