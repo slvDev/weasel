@@ -440,6 +440,9 @@ impl AnalysisEngine {
             crate::detectors::nc::FunctionLengthDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::FunctionOrderDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::HardcodedAddressDetector::default(),
         ));
         self.register_detector(Arc::new(
