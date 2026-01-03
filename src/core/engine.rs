@@ -364,6 +364,9 @@ impl AnalysisEngine {
             crate::detectors::nc::NonReentrantBeforeModifiersDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::NumericUnderscoresDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::TwoStepCriticalChangesDetector::default(),
         ));
         self.register_detector(Arc::new(
