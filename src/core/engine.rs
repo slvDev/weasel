@@ -409,6 +409,9 @@ impl AnalysisEngine {
             crate::detectors::nc::DraftDependencyDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::EcrecoverVCheckDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::RedundantElseDetector::default(),
         ));
         self.register_detector(Arc::new(
