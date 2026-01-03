@@ -28,6 +28,7 @@ pub mod type_max_literal;
 pub mod type_max_value;
 pub mod uppercase_non_constant;
 pub mod while_true_loop;
+pub mod zero_initialization;
 
 pub use abi_encode_call::AbiEncodeCallDetector;
 pub use abicoder_v2::UnnecessaryAbiCoderV2Detector;
@@ -59,3 +60,4 @@ pub use type_max_literal::TypeMaxLiteralDetector;
 pub use type_max_value::TypeMaxValueDetector;
 pub use uppercase_non_constant::UppercaseNonConstantDetector;
 pub use while_true_loop::WhileTrueLoopDetector;
+pub use zero_initialization::ZeroInitializationDetector;

@@ -379,6 +379,9 @@ impl AnalysisEngine {
             crate::detectors::nc::WhileTrueLoopDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::ZeroInitializationDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::PreferRequireDetector::default(),
         ));
         self.register_detector(Arc::new(
