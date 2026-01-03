@@ -397,6 +397,9 @@ impl AnalysisEngine {
             crate::detectors::nc::PreferRequireDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::PublicToExternalDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::PreferConcatDetector::default(),
         ));
         self.register_detector(Arc::new(
