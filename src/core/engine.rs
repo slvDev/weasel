@@ -358,6 +358,9 @@ impl AnalysisEngine {
             crate::detectors::nc::MissingErrorMessageDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::MissingEventSetterDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::NamedMappingsDetector::default(),
         ));
         self.register_detector(Arc::new(
