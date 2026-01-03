@@ -394,6 +394,9 @@ impl AnalysisEngine {
             crate::detectors::nc::PreferConcatDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::PreferModifierDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::DefaultVisibilityDetector::default(),
         ));
         self.register_detector(Arc::new(
