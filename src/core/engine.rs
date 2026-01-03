@@ -406,6 +406,9 @@ impl AnalysisEngine {
             crate::detectors::nc::RenounceOwnershipDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::ScientificNotationDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::DraftDependencyDetector::default(),
         ));
         self.register_detector(Arc::new(
