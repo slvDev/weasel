@@ -415,6 +415,9 @@ impl AnalysisEngine {
             crate::detectors::nc::ScientificNotationDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::SensitiveTermsDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::SetterEventOldValueDetector::default(),
         ));
         self.register_detector(Arc::new(
