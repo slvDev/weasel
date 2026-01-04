@@ -445,6 +445,9 @@ impl AnalysisEngine {
             crate::detectors::nc::TimeUnitsDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::TodoLeftDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::DraftDependencyDetector::default(),
         ));
         self.register_detector(Arc::new(
