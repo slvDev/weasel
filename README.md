@@ -1,121 +1,145 @@
-# Weasel - Smart Contract Static Analysis Tool
+# Weasel
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Weasel is a static analysis tool designed to help developers identify potential vulnerabilities, gas optimizations, and style issues in Solidity smart contracts. It focuses on providing actionable feedback to improve code quality and security.
+A fast, Rust-based static analysis tool for Solidity smart contracts.
 
-**Note:** Weasel is currently under active development. Features and detectors are subject to change.
+## Quick Start
+
+```bash
+cargo install weasel
+cd your-project
+weasel run
+```
 
 ## Features
 
-- **AST-Based Analysis:** Leverages the Abstract Syntax Tree for accurate code understanding.
-- **Extensible Detector Framework:** Easily add new checks for specific vulnerabilities or patterns.
-- **Configurable:** Control analysis scope, minimum severity, and output format via `weasel.toml`.
-- **Multiple Output Formats:** Generate reports in **JSON** or **Markdown** (default).
-- **Performance Oriented:** Built with Rust for efficient analysis.
+- **100+ Detectors** — Vulnerabilities, gas optimizations, and code quality checks
+- **Auto-Detection** — Automatically configures for Foundry, Hardhat, and Truffle projects
+- **Import Resolution** — Handles remappings, library paths, and relative imports
+- **Parallel Analysis** — Multi-threaded processing for fast results
+- **Flexible Output** — Markdown or JSON reports, stdout or file
 
 ## Installation
 
-**Prerequisite:** You need to have Rust installed. If you don't, get it from [rustup.rs](https://rustup.rs/).
-
-### Option 1: Install via Cargo (Recommended)
+### Using Cargo (Recommended)
 
 ```bash
 cargo install weasel
 ```
 
-### Option 2: Build from Source (for Developers or Pre-release)
+### From Source
 
-If you want to build from the latest source code or contribute to development:
-
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/slvDev/weasel.git
-    cd weasel
-    ```
-2.  **Build:**
-    ```bash
-    cargo build --release
-    ```
-    The executable will be located at `target/release/weasel`.
+```bash
+git clone https://github.com/slvDev/weasel.git
+cd weasel && cargo build --release
+```
 
 ## Usage
 
-### Initialize Configuration (Optional)
-
-Create a default `weasel.toml` configuration file in the current directory:
-
 ```bash
-./target/release/weasel init
+# Analyze current project (defaults to ./src)
+weasel run
+
+# Specify paths
+weasel run -s ./contracts -s ./src
+
+# Exclude paths
+weasel run -s ./src -e ./src/mocks -e ./src/test
+
+# Filter by severity
+weasel run -m High      # Critical only
+weasel run -m Medium    # High + Medium
+weasel run -m Low       # High + Medium + Low
+weasel run -m Gas       # + Gas optimizations
+weasel run -m NC        # All (default)
+
+# Output options
+weasel run -o report           # report.md
+weasel run -o report -f json   # report.json
 ```
-
-### Analyze Contracts
-
-Analyze specified Solidity files or directories. Settings are determined with the following priority:
-
-1.  **Command-line flags** (e.g., `--format json`, `--min-severity Low`).
-2.  Settings in `weasel.toml` (if found in the current directory or specified with `--config`).
-3.  Default settings (Scope: `["src"]`, Min Severity: `NC`, Format: `md`).
-
-```bash
-# Analyze specified files/dirs
-./target/release/weasel analyze ./path/to/contracts/ ./path/to/another/file.sol
-
-# Analyze specific scope using flags and save to a JSON report
-./target/release/weasel analyze --scope ./src/ --scope ./test/ --output report --format json
-
-# Use a specific config file and override the minimum severity
-./target/release/weasel analyze -c ./config/custom.toml -m Low ./path/to/project/
-```
-
-**Options:**
-
-- `<PATHS...>`: (Positional) One or more paths to Solidity files or directories to analyze. Overridden by `--scope` if used.
-- `-s, --scope <PATHS...>`: Specify paths to include in the analysis. Can be used multiple times.
-- `-m, --min-severity <SEVERITY>`: Minimum severity level of detectors to _run_ (`High`, `Medium`, `Low`, `Gas`, `NC`). Overrides config file setting.
-- `-f, --format <FORMAT>`: Set the report output format (`json` or `md`). Overrides config file setting. Defaults to `md`.
-- `-o, --output <FILE>`: Specify a file path to write the report to. The appropriate extension (`.json` or `.md`) will be automatically added/replaced based on the chosen format. Defaults to standard output.
-- `-c, --config <FILE>`: Path to a specific `weasel.toml` configuration file.
 
 ### List Detectors
 
-List all available detectors:
-
 ```bash
-./target/release/weasel detectors
+weasel detectors              # All detectors
+weasel detectors -s High      # By severity
+weasel detectors -d <id>      # Detector details
 ```
 
-**Options:**
+## Configuration
 
-- `-s, --severity <SEVERITY>`: Filter detectors by severity (`High`, `Medium`, `Low`, `Gas`, `NC`).
-- `-d, --details <DETECTOR_ID>`: Show detailed information for a specific detector ID.
-
-## Configuration (`weasel.toml`)
-
-Weasel can be configured using a `weasel.toml` file. By default, it looks for this file in the directory where you run the command, but a different path can be specified using the `-c, --config` flag. CLI flags always take precedence over settings in this file.
-
-Use the `weasel init` command to generate a file with default values and comments.
-
-**Example `weasel.toml`:**
+Create `weasel.toml` with `weasel init` or manually:
 
 ```toml
-# weasel.toml
-
-# Paths to include in the analysis.
-# If omitted, defaults to ["src"]
-# scope = ["src", "contracts"]
-
-# Minimum severity level of detectors to *run* during analysis.
-# Options: "High", "Medium", "Low", "Gas", "NC" (case-insensitive)
-# If omitted, defaults to "NC" (run all detectors).
-# min_severity = "Low"
-
-# Output format for the report.
-# Options: "json", "md" (or "markdown")
-# If omitted, defaults to "md".
-# output_format = "json"
+scope = ["src", "contracts"]
+exclude = ["test", "script"]
+min_severity = "Low"
+format = "md"
+remappings = ["@openzeppelin/=lib/openzeppelin-contracts/contracts/"]
 ```
+
+**Priority:** CLI flags > config file > defaults
+
+| Option | Short | Default |
+|--------|-------|---------|
+| `--scope` | `-s` | `["src"]` |
+| `--exclude` | `-e` | `["lib", "test"]` |
+| `--min-severity` | `-m` | `NC` |
+| `--format` | `-f` | `md` |
+| `--output` | `-o` | stdout |
+| `--remappings` | `-r` | auto |
+
+## Project Support
+
+### Foundry
+
+Remappings loaded in order (later overrides earlier):
+1. Default library paths (`forge-std/`, `@openzeppelin/`, etc.)
+2. `remappings.txt`
+3. `foundry.toml`
+4. CLI `-r` flags
+
+### Hardhat / Truffle
+
+- Auto-detects `hardhat.config.js/ts` or `truffle-config.js`
+- Uses `node_modules/` for dependencies
+
+## Detectors
+
+Detectors are organized by severity:
+
+| Severity | Description |
+|----------|-------------|
+| **High** | Critical vulnerabilities, potential fund loss |
+| **Medium** | Security issues, significant concerns |
+| **Low** | Minor issues, best practices |
+| **Gas** | Optimization opportunities |
+| **NC** | Code quality, style |
+
+Run `weasel detectors` to see all available checks.
+
+## FAQ
+
+**How do I exclude test files?**
+```bash
+weasel run -e ./test -e ./src/mocks
+```
+
+**How do I analyze only high-severity issues?**
+```bash
+weasel run -m High
+```
+
+**How do I add custom remappings?**
+```bash
+weasel run -r "@oz/=lib/openzeppelin/"
+```
+
+**Path doesn't exist warning?**
+
+Weasel warns and skips non-existent paths. Check your `-s` paths.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+MIT — see [LICENSE.md](LICENSE.md)
