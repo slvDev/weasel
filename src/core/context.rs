@@ -46,13 +46,24 @@ impl AnalysisContext {
     /// Loads files from specified paths, handling directories recursively.
     /// Excludes paths that match any of the exclude patterns.
     pub fn load_files(&mut self, paths: &[PathBuf], exclude: &[PathBuf]) -> Result<(), String> {
+        // Canonicalize exclude paths for consistent matching
+        let canonical_exclude: Vec<PathBuf> = exclude
+            .iter()
+            .filter_map(|p| fs::canonicalize(p).ok())
+            .collect();
+
         for path in paths {
-            if self.is_excluded(path, exclude) {
+            if !path.exists() {
+                eprintln!("Warning: Path does not exist: {}", path.display());
+                continue;
+            }
+
+            if self.is_excluded(path, &canonical_exclude) {
                 continue;
             }
 
             if path.is_dir() {
-                self.load_directory(path, exclude)?;
+                self.load_directory(path, &canonical_exclude)?;
             } else if path.is_file() && is_solidity_file(path) {
                 self.load_file(path)?;
             }
@@ -84,9 +95,13 @@ impl AnalysisContext {
 
     /// Returns true if the path matches any exclude pattern.
     fn is_excluded(&self, path: &Path, exclude: &[PathBuf]) -> bool {
+        let canonical_path = match fs::canonicalize(path) {
+            Ok(p) => p,
+            Err(_) => return false,
+        };
         exclude
             .iter()
-            .any(|exclude_pattern| path.starts_with(exclude_pattern))
+            .any(|exclude_pattern| canonical_path.starts_with(exclude_pattern))
     }
 
     /// Loads and parses a single Solidity file, extracting metadata.

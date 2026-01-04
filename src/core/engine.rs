@@ -565,16 +565,32 @@ impl AnalysisEngine {
             ProjectType::Custom => println!("Using custom project configuration"),
         }
 
-        // Merge auto-detected remappings with CLI remappings (CLI takes precedence)
-        let mut final_remappings = project_config.remappings.clone();
+        // Build remappings with proper precedence
+        let final_remappings = if project_config.project_type == ProjectType::Foundry {
+            // Convert CLI remappings to HashMap
+            let cli_remappings: HashMap<String, String> = self
+                .config
+                .remappings
+                .iter()
+                .filter_map(|r| r.split_once('=').map(|(k, v)| (k.to_string(), v.to_string())))
+                .collect();
 
-        // Parse and add CLI remappings (these override auto-detected ones)
-        for remapping in &self.config.remappings {
-            if let Some((from, to)) = remapping.split_once('=') {
-                final_remappings.insert(from.to_string(), PathBuf::from(to));
-                println!("Added CLI remapping: {} -> {}", from, to);
+            // Use full precedence: defaults -> remappings.txt -> foundry.toml -> CLI
+            ProjectConfig::load_remappings_with_precedence(&project_root, &cli_remappings)
+                .unwrap_or_else(|e| {
+                    eprintln!("Warning: Failed to load remappings: {}", e);
+                    project_config.remappings.clone()
+                })
+        } else {
+            // For non-Foundry projects, use auto-detected + CLI override
+            let mut remappings = project_config.remappings.clone();
+            for r in &self.config.remappings {
+                if let Some((from, to)) = r.split_once('=') {
+                    remappings.insert(from.to_string(), PathBuf::from(to));
+                }
             }
-        }
+            remappings
+        };
 
         if !final_remappings.is_empty() {
             println!("Total remappings configured: {}", final_remappings.len());
