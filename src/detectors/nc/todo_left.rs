@@ -97,39 +97,35 @@ mod tests {
 
     #[test]
     fn test_detects_todos() {
-        let code = r#"// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-contract Test {
-    // TODO: implement this
-    //todo: also this
-    /* TODO: fix this later */
-    /**
-     * todo: multiline comment
-     */
-    function foo() external {}
-}
-"#;
+        let code = r#"
+            contract Test {
+                // TODO: implement this
+                //todo: also this
+                /* TODO: fix this later */
+                /**
+                 * todo: multiline comment
+                 */
+                function foo() external {}
+            }
+        "#;
         let detector = Arc::new(TodoLeftDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
         assert_eq!(locations.len(), 4);
-        assert_eq!(locations[0].line, 5, "// TODO");
-        assert_eq!(locations[1].line, 6, "//todo");
-        assert_eq!(locations[2].line, 7, "/* TODO");
-        assert_eq!(locations[3].line, 9, "* todo");
+        assert_eq!(locations[0].line, 3, "// TODO");
+        assert_eq!(locations[1].line, 4, "//todo");
+        assert_eq!(locations[2].line, 5, "/* TODO");
+        assert_eq!(locations[3].line, 7, "* todo");
     }
 
     #[test]
     fn test_skips_valid_code() {
-        let code = r#"// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-contract Test {
-    mapping(address => uint256) todoList;
-    string name = "TODO";
-    function foo() external {}
-}
-"#;
+        let code = r#"
+            contract Test {
+                mapping(address => uint256) todoList;
+                string name = "TODO";
+                function foo() external {}
+            }
+        "#;
         let detector = Arc::new(TodoLeftDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
         assert_eq!(locations.len(), 0);

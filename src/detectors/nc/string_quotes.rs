@@ -84,35 +84,31 @@ mod tests {
 
     #[test]
     fn test_detects_single_quotes() {
-        let code = r#"// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+        let code = r#"
+            import './Base.sol';
+            import {Foo} from 'lib/Foo.sol';
 
-import './Base.sol';
-import {Foo} from 'lib/Foo.sol';
-
-contract Test {
-    string name = 'Hello';
-}
-"#;
+            contract Test {
+                string name = 'Hello';
+            }
+        "#;
         let detector = Arc::new(StringQuotesDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
         assert_eq!(locations.len(), 2);
-        assert_eq!(locations[0].line, 4, "first import");
-        assert_eq!(locations[1].line, 5, "second import");
+        assert_eq!(locations[0].line, 2, "first import");
+        assert_eq!(locations[1].line, 3, "second import");
     }
 
     #[test]
     fn test_skips_valid_code() {
-        let code = r#"// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+        let code = r#"
+            import "./Base.sol";
+            import {Foo} from "lib/Foo.sol";
 
-import "./Base.sol";
-import {Foo} from "lib/Foo.sol";
-
-contract Test {
-    string name = "Hello";
-}
-"#;
+            contract Test {
+                string name = "Hello";
+            }
+        "#;
         let detector = Arc::new(StringQuotesDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
         assert_eq!(locations.len(), 0);

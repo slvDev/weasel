@@ -76,34 +76,30 @@ mod tests {
     fn test_detects_long_lines() {
         let long_line = "a".repeat(121);
         let code = format!(
-            r#"// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-contract Test {{
-    // {}
-    uint256 x;
-    // {}
-}}
-"#,
+            r#"
+            contract Test {{
+                // {}
+                uint256 x;
+                // {}
+            }}
+        "#,
             long_line, long_line
         );
         let detector = Arc::new(LineLengthDetector::default());
         let locations = run_detector_on_code(detector, &code, "test.sol");
         assert_eq!(locations.len(), 2);
-        assert_eq!(locations[0].line, 5, "first long line");
-        assert_eq!(locations[1].line, 7, "second long line");
+        assert_eq!(locations[0].line, 3, "first long line");
+        assert_eq!(locations[1].line, 5, "second long line");
     }
 
     #[test]
     fn test_skips_valid_code() {
-        let code = r#"// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-contract Test {
-    uint256 public value;
-    function foo() external {}
-}
-"#;
+        let code = r#"
+            contract Test {
+                uint256 public value;
+                function foo() external {}
+            }
+        "#;
         let detector = Arc::new(LineLengthDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
         assert_eq!(locations.len(), 0);
