@@ -2,7 +2,7 @@ use crate::detectors::Detector;
 use crate::models::severity::Severity;
 use crate::utils::location::loc_to_location;
 use crate::{core::visitor::ASTVisitor, models::FindingData};
-use solang_parser::pt::{Expression, Loc};
+use solang_parser::pt::Expression;
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
@@ -55,7 +55,7 @@ require(price > 0, "Invalid price");
                 if !args.is_empty() {
                     return Vec::new();
                 }
-                
+
                 if let Expression::MemberAccess(_, _, member) = func_expr.as_ref() {
                     if member.name == "latestAnswer" {
                         return FindingData {
@@ -129,10 +129,12 @@ mod tests {
         let locations = run_detector_on_code(detector, code, "test.sol");
 
         assert_eq!(locations.len(), 2, "Should detect 2 uses of latestAnswer()");
-        
-        // Verify detection at correct lines
+
         assert_eq!(locations[0].line, 20, "First detection in getBadPrice()");
-        assert_eq!(locations[1].line, 24, "Second detection in getAnotherBadPrice()");
+        assert_eq!(
+            locations[1].line, 24,
+            "Second detection in getAnotherBadPrice()"
+        );
     }
 
     #[test]
@@ -162,10 +164,6 @@ mod tests {
         let detector = Arc::new(DeprecatedChainlinkFunctionDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
 
-        assert_eq!(
-            locations.len(),
-            0,
-            "Should not detect any false positives"
-        );
+        assert_eq!(locations.len(), 0, "Should not detect any false positives");
     }
 }
