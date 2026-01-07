@@ -1,14 +1,18 @@
-# Weasel
+<h1 align="center">Weasel</h1>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+</p>
 
-A fast, Rust-based static analysis tool for Solidity smart contracts.
+<p align="center">A fast, Rust-based static analysis tool for Solidity smart contracts.</p>
 
 ## Quick Start
 
 ```bash
 curl -L https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
-cd your-project
+```
+
+```bash
 weasel run
 ```
 
@@ -22,16 +26,11 @@ weasel run
 
 ## Installation
 
-### Using weaselup (Recommended)
-
 ```bash
 curl -L https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
 ```
 
-To update:
-```bash
-weaselup
-```
+To update, run `weaselup`.
 
 ### From Source
 
