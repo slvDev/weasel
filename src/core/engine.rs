@@ -532,7 +532,7 @@ impl AnalysisEngine {
 
         // Auto-detect project configuration
         let project_config = ProjectConfig::auto_detect(&project_root).unwrap_or_else(|e| {
-            println!("Note: Could not auto-detect project type: {}", e);
+            eprintln!("Note: Could not auto-detect project type: {}", e);
             // Fallback to custom config
             ProjectConfig::from_manual_config(
                 project_root.clone(),
@@ -541,25 +541,6 @@ impl AnalysisEngine {
                 vec![PathBuf::from("src")],
             )
         });
-
-        // Display detected project type
-        match project_config.project_type {
-            ProjectType::Foundry => {
-                println!(
-                    "Detected Foundry project at: {}",
-                    project_config.project_root.display()
-                );
-                if !project_config.remappings.is_empty() {
-                    println!(
-                        "Loaded {} auto-detected remappings from foundry.toml",
-                        project_config.remappings.len()
-                    );
-                }
-            }
-            ProjectType::Hardhat => println!("Detected Hardhat project"),
-            ProjectType::Truffle => println!("Detected Truffle project"),
-            ProjectType::Custom => println!("Using custom project configuration"),
-        }
 
         // Use project's default scope if user didn't specify one
         let scope = if self.config.scope.is_empty() {
@@ -601,56 +582,26 @@ impl AnalysisEngine {
             remappings
         };
 
-        if !final_remappings.is_empty() {
-            println!("Total remappings configured: {}", final_remappings.len());
-            for (from, to) in &final_remappings {
-                println!("  {} -> {}", from, to.display());
-            }
-        }
-
         self.context
             .set_import_resolver(final_remappings, project_config.project_root.clone());
 
         // Set library paths in the import resolver
         if let Some(ref mut resolver) = self.context.get_import_resolver_mut() {
             resolver.add_library_paths(project_config.library_paths.clone());
-            println!("Added library paths: {:?}", project_config.library_paths);
         }
 
         self.context.load_files(&scope, &self.config.exclude)?;
-        println!("Loaded {} Solidity files", self.context.files.len());
 
         self.context.build_cache()?;
-        // println!("{:?}", &self.context);
-        println!(
-            "Built inheritance cache for {} contracts",
-            self.context.contracts.len()
-        );
 
         if !self.context.missing_contracts.is_empty() {
-            println!(
-                "\nWarning: {} missing contracts detected:",
+            eprintln!(
+                "Warning: {} missing contracts detected:",
                 self.context.missing_contracts.len()
             );
             for missing in &self.context.missing_contracts {
-                println!("  - {}", missing);
+                eprintln!("  - {}", missing);
             }
-        }
-
-        // Display inheritance summary
-        println!("\nInheritance Summary:");
-        let mut has_inheritance = false;
-        for (name, contract) in &self.context.contracts {
-            if !contract.inheritance_chain.is_empty() {
-                has_inheritance = true;
-                println!("  {} inherits from:", name);
-                for base in &contract.inheritance_chain {
-                    println!("    -> {}", base);
-                }
-            }
-        }
-        if !has_inheritance {
-            println!("  No inheritance relationships found");
         }
 
         let detectors = self.registry.get_all();

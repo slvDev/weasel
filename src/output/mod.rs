@@ -45,8 +45,9 @@ pub fn generate_report(
         ReportFormat::Json => {
             if let Some(path) = output {
                 let path_with_extension = path.with_extension("json");
-                let file = File::create(path_with_extension)?;
+                let file = File::create(&path_with_extension)?;
                 serde_json::to_writer_pretty(file, report)?;
+                println!("Report saved: {}", path_with_extension.display());
             } else {
                 let stdout = io::stdout();
                 let handle = stdout.lock();
@@ -58,8 +59,9 @@ pub fn generate_report(
 
             if let Some(path) = output {
                 let path_with_extension = path.with_extension("md");
-                let mut file = File::create(path_with_extension)?;
+                let mut file = File::create(&path_with_extension)?;
                 write!(file, "{}", markdown)?;
+                println!("Report saved: {}", path_with_extension.display());
             } else {
                 println!("{}", markdown);
             }
