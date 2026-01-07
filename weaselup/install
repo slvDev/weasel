@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -e
+
+# Weasel Installer
+# Downloads and installs weaselup, then runs it to install weasel
+
+WEASEL_DIR="${WEASEL_DIR:-$HOME/.weasel}"
+WEASEL_BIN_DIR="$WEASEL_DIR/bin"
+
+REPO="slvDev/weasel"
+WEASELUP_URL="https://raw.githubusercontent.com/$REPO/main/weaselup/weaselup"
+
+main() {
+    echo "Installing weaselup..."
+
+    # Create directories
+    mkdir -p "$WEASEL_BIN_DIR"
+
+    # Download weaselup
+    if command -v curl &> /dev/null; then
+        curl -fsSL "$WEASELUP_URL" -o "$WEASEL_BIN_DIR/weaselup"
+    elif command -v wget &> /dev/null; then
+        wget -qO "$WEASEL_BIN_DIR/weaselup" "$WEASELUP_URL"
+    else
+        echo "Error: curl or wget is required"
+        exit 1
+    fi
+
+    # Make executable
+    chmod +x "$WEASEL_BIN_DIR/weaselup"
+
+    # Add to PATH
+    add_to_path
+
+    echo ""
+    echo "weaselup installed to $WEASEL_BIN_DIR"
+    echo ""
+
+    # Run weaselup to install weasel
+    "$WEASEL_BIN_DIR/weaselup"
+
+    echo ""
+    echo "Done! Run 'weaselup' to update weasel."
+}
+
+add_to_path() {
+    local shell_name
+    shell_name=$(basename "$SHELL")
+
+    case $shell_name in
+        zsh)
+            add_to_file "$HOME/.zshenv"
+            ;;
+        bash)
+            if [[ -f "$HOME/.bash_profile" ]]; then
+                add_to_file "$HOME/.bash_profile"
+            else
+                add_to_file "$HOME/.bashrc"
+            fi
+            ;;
+        fish)
+            add_to_fish
+            ;;
+        *)
+            echo "Note: Add $WEASEL_BIN_DIR to your PATH manually"
+            return
+            ;;
+    esac
+
+    echo "Added $WEASEL_BIN_DIR to PATH in your shell config"
+    echo "Run 'source ~/.${shell_name}rc' or restart your terminal"
+}
+
+add_to_file() {
+    local file="$1"
+    local line="export PATH=\"\$PATH:$WEASEL_BIN_DIR\""
+
+    # Check if already added
+    if [[ -f "$file" ]] && grep -q "$WEASEL_BIN_DIR" "$file"; then
+        return
+    fi
+
+    echo "" >> "$file"
+    echo "# Weasel" >> "$file"
+    echo "$line" >> "$file"
+}
+
+add_to_fish() {
+    local fish_config="$HOME/.config/fish/config.fish"
+    mkdir -p "$(dirname "$fish_config")"
+
+    if [[ -f "$fish_config" ]] && grep -q "$WEASEL_BIN_DIR" "$fish_config"; then
+        return
+    fi
+
+    echo "" >> "$fish_config"
+    echo "# Weasel" >> "$fish_config"
+    echo "fish_add_path $WEASEL_BIN_DIR" >> "$fish_config"
+}
+
+main

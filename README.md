@@ -7,7 +7,7 @@ A fast, Rust-based static analysis tool for Solidity smart contracts.
 ## Quick Start
 
 ```bash
-cargo install weasel
+curl -L https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
 cd your-project
 weasel run
 ```
@@ -22,10 +22,15 @@ weasel run
 
 ## Installation
 
-### Using Cargo (Recommended)
+### Using weaselup (Recommended)
 
 ```bash
-cargo install weasel
+curl -L https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
+```
+
+To update:
+```bash
+weaselup
 ```
 
 ### From Source
@@ -104,6 +109,7 @@ Remappings loaded in order (later overrides earlier):
 
 - Auto-detects `hardhat.config.js/ts` or `truffle-config.js`
 - Uses `node_modules/` for dependencies
+- Default scope: `./contracts`
 
 ## Detectors
 
