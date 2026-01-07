@@ -38,7 +38,7 @@ pub const DEFAULT_CONFIG_CONTENT: &str = r#"# weasel.toml
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    #[serde(default = "default_scope")]
+    #[serde(default)]
     pub scope: Vec<PathBuf>,
     #[serde(default = "default_exclude")]
     pub exclude: Vec<PathBuf>,
@@ -50,10 +50,6 @@ pub struct Config {
     pub remappings: Vec<String>,
 }
 
-fn default_scope() -> Vec<PathBuf> {
-    vec![PathBuf::from("src")]
-}
-
 fn default_exclude() -> Vec<PathBuf> {
     vec![PathBuf::from("lib"), PathBuf::from("test")]
 }
@@ -61,7 +57,7 @@ fn default_exclude() -> Vec<PathBuf> {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            scope: default_scope(),
+            scope: Vec::new(),
             exclude: default_exclude(),
             min_severity: Severity::default(),
             format: ReportFormat::default(),

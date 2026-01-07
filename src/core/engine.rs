@@ -322,9 +322,7 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::gas::ShouldBeImmutableDetector::default(),
         ));
-        self.register_detector(Arc::new(
-            crate::detectors::gas::ThisUsageDetector::default(),
-        ));
+        self.register_detector(Arc::new(crate::detectors::gas::ThisUsageDetector::default()));
         self.register_detector(Arc::new(
             crate::detectors::gas::UintGtZeroDetector::default(),
         ));
@@ -444,12 +442,8 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::nc::StringQuotesDetector::default(),
         ));
-        self.register_detector(Arc::new(
-            crate::detectors::nc::TimeUnitsDetector::default(),
-        ));
-        self.register_detector(Arc::new(
-            crate::detectors::nc::TodoLeftDetector::default(),
-        ));
+        self.register_detector(Arc::new(crate::detectors::nc::TimeUnitsDetector::default()));
+        self.register_detector(Arc::new(crate::detectors::nc::TodoLeftDetector::default()));
         self.register_detector(Arc::new(
             crate::detectors::nc::DraftDependencyDetector::default(),
         ));
@@ -487,9 +481,7 @@ impl AnalysisEngine {
         self.register_detector(Arc::new(
             crate::detectors::nc::LargeLiteralDetector::default(),
         ));
-        self.register_detector(Arc::new(
-            crate::detectors::nc::LineLengthDetector::default(),
-        ));
+        self.register_detector(Arc::new(crate::detectors::nc::LineLengthDetector::default()));
         self.register_detector(Arc::new(
             crate::detectors::nc::ExplicitNumTypesDetector::default(),
         ));
@@ -546,13 +538,17 @@ impl AnalysisEngine {
                 project_root.clone(),
                 HashMap::new(),
                 vec![PathBuf::from("lib"), PathBuf::from("node_modules")],
+                vec![PathBuf::from("src")],
             )
         });
 
         // Display detected project type
         match project_config.project_type {
             ProjectType::Foundry => {
-                println!("Detected Foundry project at: {}", project_root.display());
+                println!(
+                    "Detected Foundry project at: {}",
+                    project_config.project_root.display()
+                );
                 if !project_config.remappings.is_empty() {
                     println!(
                         "Loaded {} auto-detected remappings from foundry.toml",
@@ -565,6 +561,13 @@ impl AnalysisEngine {
             ProjectType::Custom => println!("Using custom project configuration"),
         }
 
+        // Use project's default scope if user didn't specify one
+        let scope = if self.config.scope.is_empty() {
+            &project_config.default_scope
+        } else {
+            &self.config.scope
+        };
+
         // Build remappings with proper precedence
         let final_remappings = if project_config.project_type == ProjectType::Foundry {
             // Convert CLI remappings to HashMap
@@ -572,15 +575,21 @@ impl AnalysisEngine {
                 .config
                 .remappings
                 .iter()
-                .filter_map(|r| r.split_once('=').map(|(k, v)| (k.to_string(), v.to_string())))
+                .filter_map(|r| {
+                    r.split_once('=')
+                        .map(|(k, v)| (k.to_string(), v.to_string()))
+                })
                 .collect();
 
             // Use full precedence: defaults -> remappings.txt -> foundry.toml -> CLI
-            ProjectConfig::load_remappings_with_precedence(&project_root, &cli_remappings)
-                .unwrap_or_else(|e| {
-                    eprintln!("Warning: Failed to load remappings: {}", e);
-                    project_config.remappings.clone()
-                })
+            ProjectConfig::load_remappings_with_precedence(
+                &project_config.project_root,
+                &cli_remappings,
+            )
+            .unwrap_or_else(|e| {
+                eprintln!("Warning: Failed to load remappings: {}", e);
+                project_config.remappings.clone()
+            })
         } else {
             // For non-Foundry projects, use auto-detected + CLI override
             let mut remappings = project_config.remappings.clone();
@@ -600,7 +609,7 @@ impl AnalysisEngine {
         }
 
         self.context
-            .set_import_resolver(final_remappings, project_root.clone());
+            .set_import_resolver(final_remappings, project_config.project_root.clone());
 
         // Set library paths in the import resolver
         if let Some(ref mut resolver) = self.context.get_import_resolver_mut() {
@@ -608,8 +617,7 @@ impl AnalysisEngine {
             println!("Added library paths: {:?}", project_config.library_paths);
         }
 
-        self.context
-            .load_files(&self.config.scope, &self.config.exclude)?;
+        self.context.load_files(&scope, &self.config.exclude)?;
         println!("Loaded {} Solidity files", self.context.files.len());
 
         self.context.build_cache()?;

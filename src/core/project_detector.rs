@@ -17,6 +17,7 @@ pub struct ProjectConfig {
     pub remappings: HashMap<String, PathBuf>,
     pub library_paths: Vec<PathBuf>,
     pub project_root: PathBuf,
+    pub default_scope: Vec<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,12 +59,14 @@ impl ProjectConfig {
         project_root: PathBuf,
         remappings: HashMap<String, PathBuf>,
         library_paths: Vec<PathBuf>,
+        default_scope: Vec<PathBuf>,
     ) -> ProjectConfig {
         ProjectConfig {
             project_type: ProjectType::Custom,
             remappings,
             library_paths,
             project_root,
+            default_scope,
         }
     }
 
@@ -142,23 +145,27 @@ impl ProjectConfig {
         // Library paths from foundry config
         let library_paths = foundry_config.libs.into_iter().map(PathBuf::from).collect();
 
+        let default_scope = if foundry_config.src.is_empty() {
+            vec![PathBuf::from("src")]
+        } else {
+            vec![PathBuf::from(foundry_config.src)]
+        };
+
         Ok(ProjectConfig {
             project_type: ProjectType::Foundry,
             remappings,
             library_paths,
             project_root: project_root.clone(),
+            default_scope,
         })
     }
 
     /// Load Hardhat project configuration
     fn load_hardhat_config(project_root: &PathBuf) -> Result<ProjectConfig, String> {
-        // For Hardhat, we use standard node_modules structure
         let library_paths = vec![PathBuf::from("node_modules")];
+        let default_scope = vec![PathBuf::from("contracts")];
 
-        // Standard npm package remappings
         let mut remappings = HashMap::new();
-
-        // Check if @openzeppelin is installed
         let openzeppelin_path = project_root.join("node_modules/@openzeppelin");
         if openzeppelin_path.exists() {
             remappings.insert("@openzeppelin/".to_string(), openzeppelin_path);
@@ -169,36 +176,37 @@ impl ProjectConfig {
             remappings,
             library_paths,
             project_root: project_root.clone(),
+            default_scope,
         })
     }
 
     /// Load Truffle project configuration
     fn load_truffle_config(project_root: &PathBuf) -> Result<ProjectConfig, String> {
-        // Similar to Hardhat - uses node_modules
         let library_paths = vec![PathBuf::from("node_modules")];
-        let remappings = HashMap::new(); // Truffle doesn't typically use remappings
+        let remappings = HashMap::new();
+        let default_scope = vec![PathBuf::from("contracts")];
 
         Ok(ProjectConfig {
             project_type: ProjectType::Truffle,
             remappings,
             library_paths,
             project_root: project_root.clone(),
+            default_scope,
         })
     }
 
     /// Load default configuration for unrecognized projects
     fn load_default_config(project_root: &PathBuf) -> Result<ProjectConfig, String> {
-        let library_paths = vec![
-            PathBuf::from("lib"),
-            PathBuf::from("node_modules"),
-            PathBuf::from("contracts"),
-        ];
+        let library_paths = vec![PathBuf::from("lib"), PathBuf::from("node_modules")];
+        let remappings = HashMap::new();
+        let default_scope = vec![PathBuf::from("src")];
 
         Ok(ProjectConfig {
             project_type: ProjectType::Custom,
-            remappings: HashMap::new(),
+            remappings,
             library_paths,
             project_root: project_root.clone(),
+            default_scope,
         })
     }
 
