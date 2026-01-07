@@ -683,6 +683,11 @@ impl AnalysisEngine {
             }
         }
 
+        // Sort findings by severity (High -> Medium -> Low -> Gas -> NC)
+        report
+            .findings
+            .sort_by(|a, b| b.severity.as_value().cmp(&a.severity.as_value()));
+
         // Add metadata
         report.add_metadata("Version:", crate::core::version());
         report.add_metadata(
