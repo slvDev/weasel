@@ -65,9 +65,15 @@ contract Example {
             let mut findings = Vec::new();
             for (i, (order, func)) in functions.iter().enumerate() {
                 if *order != sorted_orders[i] {
+                    let loc = func
+                        .name
+                        .as_ref()
+                        .map(|n| loc_to_location(&n.loc, file))
+                        .unwrap_or_else(|| loc_to_location(&func.loc, file));
+
                     findings.push(FindingData {
                         detector_id: self.id(),
-                        location: loc_to_location(&func.loc, file),
+                        location: loc,
                     });
                 }
             }

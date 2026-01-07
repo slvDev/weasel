@@ -58,22 +58,22 @@ contract MyNFT {
             if let Some(name) = &contract.name {
                 let contract_name = &name.name;
                 let qualified_name = context.get_qualified_name_for_contract(contract_name);
-                
+
                 if let Some(contract_info) = context.get_contract(&qualified_name) {
                     let has_mint = contract_info.function_definitions.iter().any(|f| f.name == "_mint");
                     let has_safemint = contract_info.function_definitions.iter().any(|f| f.name == "_safeMint");
-                    
+
                     // Check if only one exists (asymmetry)
                     if has_mint != has_safemint {
                         return FindingData {
                             detector_id: self.id(),
-                            location: loc_to_location(&contract.loc, file),
+                            location: loc_to_location(&name.loc, file),
                         }
                         .into();
                     }
                 }
             }
-            
+
             Vec::new()
         });
     }

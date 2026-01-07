@@ -25,13 +25,7 @@ pub fn handle_run_command(
     engine.register_built_in_detectors();
 
     match engine.analyze() {
-        Ok(mut report) => {
-            report = report
-                .with_comment("This analysis was performed with the Weasel Static Analysis Tool.");
-            report = report.with_footnote(
-                "This tool is in development. For questions or feedback, please contact the Weasel team.",
-            );
-
+        Ok(report) => {
             if let Err(e) = output::generate_report(&report, &config.format, output) {
                 eprintln!("Error generating report: {}", e);
                 std::process::exit(1);

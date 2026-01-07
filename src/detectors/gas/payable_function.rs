@@ -61,17 +61,24 @@ function withdraw() external payable onlyOwner {
                 return Vec::new();
             }
 
-            let is_payable = func_def.attributes.iter().any(|attr| {
-                matches!(attr, FunctionAttribute::Mutability(Mutability::Payable(_)))
-            });
+            let is_payable = func_def
+                .attributes
+                .iter()
+                .any(|attr| matches!(attr, FunctionAttribute::Mutability(Mutability::Payable(_))));
 
             if is_payable {
                 return Vec::new();
             }
 
+            let loc = func_def
+                .name
+                .as_ref()
+                .map(|n| loc_to_location(&n.loc, file))
+                .unwrap_or_else(|| loc_to_location(&func_def.loc, file));
+
             FindingData {
                 detector_id: self.id(),
-                location: loc_to_location(&func_def.loc, file),
+                location: loc,
             }
             .into()
         });
