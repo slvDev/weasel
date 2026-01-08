@@ -20,22 +20,44 @@ pub struct ProjectConfig {
     pub default_scope: Vec<PathBuf>,
 }
 
-#[derive(Debug, Deserialize)]
-struct FoundryConfig {
+#[derive(Debug, Deserialize, Default)]
+struct FoundryToml {
+    #[serde(default)]
+    profile: FoundryProfiles,
     #[serde(default)]
     remappings: Vec<String>,
-    #[serde(default)]
-    libs: Vec<String>,
-    #[serde(default)]
-    src: String,
 }
 
-impl Default for FoundryConfig {
+#[derive(Debug, Deserialize, Default)]
+struct FoundryProfiles {
+    #[serde(default)]
+    default: FoundryProfile,
+}
+
+#[derive(Debug, Deserialize)]
+struct FoundryProfile {
+    #[serde(default = "default_src")]
+    src: String,
+    #[serde(default = "default_libs")]
+    libs: Vec<String>,
+    #[serde(default)]
+    remappings: Vec<String>,
+}
+
+fn default_src() -> String {
+    "src".to_string()
+}
+
+fn default_libs() -> Vec<String> {
+    vec!["lib".to_string()]
+}
+
+impl Default for FoundryProfile {
     fn default() -> Self {
         Self {
+            src: default_src(),
+            libs: default_libs(),
             remappings: Vec::new(),
-            libs: vec!["lib".to_string()],
-            src: "src".to_string(),
         }
     }
 }
@@ -119,19 +141,24 @@ impl ProjectConfig {
     fn load_foundry_config(project_root: &PathBuf) -> Result<ProjectConfig, String> {
         let foundry_toml_path = project_root.join("foundry.toml");
 
-        let foundry_config = if foundry_toml_path.exists() {
+        let foundry_toml = if foundry_toml_path.exists() {
             let content = fs::read_to_string(&foundry_toml_path)
                 .map_err(|e| format!("Failed to read foundry.toml: {}", e))?;
 
-            toml::from_str::<FoundryConfig>(&content)
+            toml::from_str::<FoundryToml>(&content)
                 .map_err(|e| format!("Failed to parse foundry.toml: {}", e))?
         } else {
-            FoundryConfig::default()
+            FoundryToml::default()
         };
 
-        // Parse remappings from foundry config
+        // Get profile.default settings
+        let profile = &foundry_toml.profile.default;
+
+        // Collect remappings from both root-level and profile-level
         let mut remappings = HashMap::new();
-        for remapping in &foundry_config.remappings {
+
+        // root-level remappings
+        for remapping in &foundry_toml.remappings {
             if let Some((from, to)) = remapping.split_once('=') {
                 let to_path = if to.starts_with('/') {
                     PathBuf::from(to)
@@ -142,13 +169,25 @@ impl ProjectConfig {
             }
         }
 
-        // Library paths from foundry config
-        let library_paths = foundry_config.libs.into_iter().map(PathBuf::from).collect();
+        // profile-level remappings
+        for remapping in &profile.remappings {
+            if let Some((from, to)) = remapping.split_once('=') {
+                let to_path = if to.starts_with('/') {
+                    PathBuf::from(to)
+                } else {
+                    project_root.join(to)
+                };
+                remappings.insert(from.to_string(), to_path);
+            }
+        }
 
-        let default_scope = if foundry_config.src.is_empty() {
+        // Library paths from profile config
+        let library_paths: Vec<PathBuf> = profile.libs.iter().map(|s| PathBuf::from(s)).collect();
+
+        let default_scope = if profile.src.is_empty() {
             vec![PathBuf::from("src")]
         } else {
-            vec![PathBuf::from(foundry_config.src)]
+            vec![PathBuf::from(&profile.src)]
         };
 
         Ok(ProjectConfig {
@@ -272,11 +311,25 @@ impl ProjectConfig {
         let content = fs::read_to_string(&foundry_toml_path)
             .map_err(|e| format!("Failed to read foundry.toml: {}", e))?;
 
-        let foundry_config: FoundryConfig =
+        let foundry_toml: FoundryToml =
             toml::from_str(&content).map_err(|e| format!("Failed to parse foundry.toml: {}", e))?;
 
         let mut remappings = HashMap::new();
-        for remapping in &foundry_config.remappings {
+
+        // root-level remappings
+        for remapping in &foundry_toml.remappings {
+            if let Some((from, to)) = remapping.split_once('=') {
+                let to_path = if to.starts_with('/') {
+                    PathBuf::from(to)
+                } else {
+                    project_root.join(to)
+                };
+                remappings.insert(from.to_string(), to_path);
+            }
+        }
+
+        // profile.default remappings
+        for remapping in &foundry_toml.profile.default.remappings {
             if let Some((from, to)) = remapping.split_once('=') {
                 let to_path = if to.starts_with('/') {
                     PathBuf::from(to)
