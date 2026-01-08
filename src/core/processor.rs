@@ -20,18 +20,10 @@ impl Processor {
         visitor: &ASTVisitor,
         context: &AnalysisContext,
     ) -> AnalysisResults {
-        let thread_count = self.get_thread_count();
-        println!(
-            "Processing {} files using {} threads",
-            files.len(),
-            thread_count
-        );
-
         // Configure Rayon thread pool
-        rayon::ThreadPoolBuilder::new()
-            .num_threads(thread_count)
-            .build_global()
-            .expect("Failed to build thread pool");
+        let _ = rayon::ThreadPoolBuilder::new()
+            .num_threads(self.get_thread_count())
+            .build_global();
 
         // Process files - each file gets its own collector
         let collectors: Vec<FindingCollector> = files
@@ -51,15 +43,7 @@ impl Processor {
             })
             .collect();
 
-        let results = self.merge_results(collectors);
-
-        println!(
-            "Analysis complete: {} total findings from {} files",
-            results.total_findings(),
-            files.len()
-        );
-
-        results
+        self.merge_results(collectors)
     }
 
     /// Merge collectors into final results

@@ -26,6 +26,10 @@ pub fn handle_run_command(
 
     match engine.analyze() {
         Ok(report) => {
+            println!(
+                "Analysis complete: {} findings",
+                report.findings.iter().map(|f| f.locations.len()).sum::<usize>()
+            );
             if let Err(e) = output::generate_report(&report, &config.format, output) {
                 eprintln!("Error generating report: {}", e);
                 std::process::exit(1);
