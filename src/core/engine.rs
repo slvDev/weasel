@@ -624,6 +624,7 @@ impl AnalysisEngine {
         for (detector_id, locations) in &results.findings_by_detector {
             if let Some(detector) = self.registry.get(detector_id) {
                 let finding = Finding {
+                    detector_id: detector_id.to_string(),
                     severity: detector.severity(),
                     title: detector.name().to_string(),
                     description: detector.description().to_string(),
@@ -654,4 +655,25 @@ impl AnalysisEngine {
     pub fn registry(&self) -> &DetectorRegistry {
         &self.registry
     }
+
+    pub fn get_detector_info(&self) -> Vec<DetectorInfo> {
+        self.registry
+            .get_all()
+            .iter()
+            .map(|d| DetectorInfo {
+                id: d.id().to_string(),
+                name: d.name().to_string(),
+                severity: format!("{:?}", d.severity()),
+                description: d.description().to_string(),
+            })
+            .collect()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DetectorInfo {
+    pub id: String,
+    pub name: String,
+    pub severity: String,
+    pub description: String,
 }
