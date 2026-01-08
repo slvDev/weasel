@@ -50,6 +50,10 @@ enum Commands {
         #[arg(short, long)]
         details: Option<String>,
     },
+    Mcp {
+        #[command(subcommand)]
+        command: cli::mcp::McpCommands,
+    },
 }
 
 fn main() {
@@ -80,6 +84,9 @@ fn main() {
         }
         Commands::Detectors { severity, details } => {
             cli::detectors::handle_detectors_command(severity, details);
+        }
+        Commands::Mcp { command } => {
+            cli::mcp::handle_mcp_command(command);
         }
     }
 }
