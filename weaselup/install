@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -eo pipefail
 
 # Weasel Installer
 # Downloads and installs weaselup, then runs it to install weasel
@@ -29,46 +29,44 @@ main() {
     # Make executable
     chmod +x "$WEASEL_BIN_DIR/weaselup"
 
-    # Add to PATH
+    # Add to PATH (sets PROFILE variable)
     add_to_path
 
-    echo ""
-    echo "weaselup installed to $WEASEL_BIN_DIR"
     echo ""
 
     # Run weaselup to install weasel
     "$WEASEL_BIN_DIR/weaselup"
 
+    # Final message with source instruction
     echo ""
-    echo "Done! Run 'weaselup' to update weasel."
+    if [[ -n "$PROFILE" ]]; then
+        echo "Run 'source $PROFILE' or start a new terminal to use weasel."
+    fi
+    echo "Run 'weaselup' anytime to update."
 }
 
 add_to_path() {
-    local shell_name
-    shell_name=$(basename "$SHELL")
-
-    case $shell_name in
-        zsh)
-            add_to_file "$HOME/.zshenv"
+    case $SHELL in
+        */zsh)
+            PROFILE="${ZDOTDIR-"$HOME"}/.zshenv"
+            add_to_file "$PROFILE"
             ;;
-        bash)
+        */bash)
             if [[ -f "$HOME/.bash_profile" ]]; then
-                add_to_file "$HOME/.bash_profile"
+                PROFILE="$HOME/.bash_profile"
             else
-                add_to_file "$HOME/.bashrc"
+                PROFILE="$HOME/.bashrc"
             fi
+            add_to_file "$PROFILE"
             ;;
-        fish)
+        */fish)
+            PROFILE="$HOME/.config/fish/config.fish"
             add_to_fish
             ;;
         *)
-            echo "Note: Add $WEASEL_BIN_DIR to your PATH manually"
-            return
+            echo "Could not detect shell. Add $WEASEL_BIN_DIR to your PATH manually."
             ;;
     esac
-
-    echo "Added $WEASEL_BIN_DIR to PATH in your shell config"
-    echo "Run 'source ~/.${shell_name}rc' or restart your terminal"
 }
 
 add_to_file() {
@@ -95,7 +93,7 @@ add_to_fish() {
 
     echo "" >> "$fish_config"
     echo "# Weasel" >> "$fish_config"
-    echo "fish_add_path $WEASEL_BIN_DIR" >> "$fish_config"
+    echo "fish_add_path -a \"$WEASEL_BIN_DIR\"" >> "$fish_config"
 }
 
 main
