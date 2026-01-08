@@ -13,6 +13,7 @@ pub struct Location {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Finding {
+    pub detector_id: String,
     pub severity: Severity,
     pub title: String,
     pub description: String,
