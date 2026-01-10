@@ -19,11 +19,15 @@
 </p>
 
 ```bash
+# 1. Install weasel
+curl -L https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
+
+# 2. Add to your AI tool:
 # Claude Code (recommended - MCP + skills)
 /plugin marketplace add slvDev/weasel
 /plugin install weasel
 
-# MCP only (Claude Code, Cursor, Windsurf)
+# MCP only for Claude Code (if you don't want skills), Cursor, Windsurf
 weasel mcp add
 ```
 

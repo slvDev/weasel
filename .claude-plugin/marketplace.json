@@ -1,14 +1,29 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "weasel",
   "description": "Weasel - Solidity static analyzer with AI integration",
   "owner": {
     "name": "slvDev"
   },
+  "metadata": {
+    "description": "Security-focused static analysis tool for Solidity smart contracts with AI-powered skills for auditing and secure development",
+    "version": "1.0.0"
+  },
   "plugins": [
     {
       "name": "weasel",
-      "description": "Solidity static analysis with security skills for AI-assisted auditing",
-      "source": "./weasel"
+      "description": "Solidity static analysis with security skills for auditing and secure development",
+      "source": "./weasel",
+      "version": "0.4.0",
+      "author": {
+        "name": "slvDev"
+      },
+      "homepage": "https://github.com/slvDev/weasel",
+      "repository": "https://github.com/slvDev/weasel",
+      "license": "MIT",
+      "keywords": ["solidity", "security", "audit", "smart-contracts", "static-analysis"],
+      "category": "security",
+      "tags": ["web3", "ethereum", "defi", "vulnerability-detection"]
     }
   ]
 }
