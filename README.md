@@ -94,17 +94,24 @@ For **Claude Code** users, install the Weasel plugin for intelligent skills:
 
 Use `weasel` prefix to activate skills:
 
-| You say...        | Skill activates                   |
-| ----------------- | --------------------------------- |
-| "weasel analyze"  | Static analysis & security review |
-| "weasel validate" | Attack hypothesis validation      |
-| "weasel filter"   | False positive triage             |
-| "weasel poc"      | Proof of concept writing          |
-| "weasel report"   | Audit report formatting           |
-| "weasel gas"      | Gas optimization                  |
-| "weasel explain"  | Code explanation                  |
-| "weasel overview" | Project scoping                   |
-| "weasel simplify" | Code refactoring                  |
+**Audit:**
+
+| Skill             | What it does                                              |
+| ----------------- | --------------------------------------------------------- |
+| `weasel analyze`  | Security review (quick scan / manual review / full audit) |
+| `weasel validate` | Verify if attack hypothesis is exploitable                |
+| `weasel filter`   | Triage findings, filter false positives                   |
+| `weasel poc`      | Write exploit PoC (Foundry/Hardhat)                       |
+| `weasel report`   | Format findings as professional audit report              |
+| `weasel overview` | Scope project, map architecture/attack surface            |
+
+**Dev:**
+
+| Skill             | What it does                                   |
+| ----------------- | ---------------------------------------------- |
+| `weasel gas`      | Find and implement gas optimizations           |
+| `weasel explain`  | Explain code logic, patterns, and risks        |
+| `weasel simplify` | Refactor for clarity without changing behavior |
 
 **Skills provide context-aware expertise** — Claude knows how to analyze Solidity, write PoCs in Foundry/Hardhat, format audit reports, and more. The `weasel` prefix ensures skills only activate when you want them.
 
@@ -123,11 +130,11 @@ weasel mcp add --target windsurf    # Windsurf only
 weasel mcp add --target claude      # Claude Code only
 ```
 
-| IDE         | MCP Tools | Skills                      |
-| ----------- | --------- | --------------------------- |
-| Claude Code | ✅        | ✅ (via `/plugin install`)  |
-| Cursor      | ✅        | ❌                          |
-| Windsurf    | ✅        | ❌                          |
+| IDE         | MCP Tools | Skills                     |
+| ----------- | --------- | -------------------------- |
+| Claude Code | ✅        | ✅ (via `/plugin install`) |
+| Cursor      | ✅        | ❌                         |
+| Windsurf    | ✅        | ❌                         |
 
 MCP tools (`weasel_analyze`, `weasel_finding_details`, `weasel_detectors`) work in all IDEs. Skills (PoC writing, report formatting, etc.) are Claude Code exclusive.
 
