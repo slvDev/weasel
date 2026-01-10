@@ -8,9 +8,7 @@
     {
       "name": "weasel",
       "description": "Solidity static analysis with security skills for AI-assisted auditing",
-      "source": {
-        "type": "local"
-      }
+      "source": "./weasel"
     }
   ]
 }

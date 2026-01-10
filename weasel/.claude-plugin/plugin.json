@@ -1,0 +1,7 @@
+{
+  "name": "weasel",
+  "description": "Solidity static analyzer with AI-powered security skills for auditing smart contracts",
+  "author": {
+    "name": "slvDev"
+  }
+}
