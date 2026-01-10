@@ -1,0 +1,16 @@
+{
+  "name": "weasel",
+  "description": "Weasel - Solidity static analyzer with AI integration",
+  "owner": {
+    "name": "slvDev"
+  },
+  "plugins": [
+    {
+      "name": "weasel",
+      "description": "Solidity static analysis with security skills for AI-assisted auditing",
+      "source": {
+        "type": "local"
+      }
+    }
+  ]
+}

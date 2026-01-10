@@ -19,42 +19,47 @@
 </p>
 
 ```bash
-weasel mcp add  # one-time setup, restart your AI tool
+# Claude Code (recommended - MCP + skills)
+/plugin marketplace add slvDev/weasel
+/plugin install weasel
+
+# MCP only (Claude Code, Cursor, Windsurf)
+weasel mcp add
 ```
 
-Now just ask:
+Now just say `weasel <command>`:
 
-> "Analyze my contracts with weasel"
+> "weasel analyze my contracts"
 
-> "What high severity issues did weasel find?"
+> "weasel poc for this reentrancy bug"
 
-> "Explain the reentrancy vulnerability and how to fix it"
+> "weasel report this finding"
 
-> "Run weasel on src/Token.sol"
+> "weasel explain this function"
 
-Weasel runs the analysis. Your AI explains the results and helps you fix them.
+Weasel skills activate. Your AI runs analysis, writes PoCs, formats reports, and more.
 
 ---
 
 ## Features
 
+- **AI-Native Skills** — 9 specialized skills for Claude Code (PoC writing, report formatting, gas optimization, and more)
 - **Blazing Fast** — Parallel Rust analysis, instant MCP responses
-- **AI Integration** — Native MCP server for Claude Code, Cursor, and Windsurf
+- **MCP Server** — Works with Claude Code, Cursor, Windsurf, and any MCP-compatible tool
 - **Extensive Detectors** — Vulnerabilities, gas optimizations, and code quality checks
 - **Auto-Detection** — Automatically configures for Foundry, Hardhat, and Truffle projects
-- **Flexible Output** — Markdown or JSON reports, stdout or file
 
 ---
 
 ## Why Weasel?
 
-|                    | Weasel                           | Other Analyzers              |
-| ------------------ | -------------------------------- | ---------------------------- |
-| **AI Integration** | Native MCP server                | Copy-paste output to ChatGPT |
-| **Setup**          | `weasel mcp add`                 | Manual config, scripts       |
-| **Workflow**       | Ask questions, get answers       | Read reports, search fixes   |
-| **Context**        | AI sees code + findings together | Context lost between tools   |
-| **Speed**          | Parallel Rust analysis           | Often single-threaded        |
+|                    | Weasel                              | Other Analyzers              |
+| ------------------ | ----------------------------------- | ---------------------------- |
+| **AI Integration** | Native skills + MCP                 | Copy-paste output to ChatGPT |
+| **Setup**          | `plugin install` / `mcp add`        | Manual config, scripts       |
+| **Workflow**       | "weasel poc for this bug"           | Read reports, search fixes   |
+| **Context**        | AI knows Solidity security patterns | Context lost between tools   |
+| **Speed**          | Parallel Rust analysis              | Often single-threaded        |
 
 ---
 
@@ -78,18 +83,53 @@ cd weasel && cargo build --release
 
 ---
 
-## Supported AI Tools
+## Claude Code Integration
 
-| Tool        | Status | Setup                              |
-| ----------- | ------ | ---------------------------------- |
-| Claude Code | ✅     | `weasel mcp add --target claude`   |
-| Cursor      | ✅     | `weasel mcp add --target cursor`   |
-| Windsurf    | ✅     | `weasel mcp add --target windsurf` |
+For **Claude Code** users, install the Weasel plugin for intelligent skills:
 
 ```bash
-weasel mcp add      # auto-detect all
-weasel mcp remove   # remove from all
+/plugin marketplace add slvDev/weasel
+/plugin install weasel
 ```
+
+Use `weasel` prefix to activate skills:
+
+| You say...        | Skill activates                   |
+| ----------------- | --------------------------------- |
+| "weasel analyze"  | Static analysis & security review |
+| "weasel validate" | Attack hypothesis validation      |
+| "weasel filter"   | False positive triage             |
+| "weasel poc"      | Proof of concept writing          |
+| "weasel report"   | Audit report formatting           |
+| "weasel gas"      | Gas optimization                  |
+| "weasel explain"  | Code explanation                  |
+| "weasel overview" | Project scoping                   |
+| "weasel simplify" | Code refactoring                  |
+
+**Skills provide context-aware expertise** — Claude knows how to analyze Solidity, write PoCs in Foundry/Hardhat, format audit reports, and more. The `weasel` prefix ensures skills only activate when you want them.
+
+> To update the plugin, run `/plugin update weasel` in Claude Code.
+
+---
+
+## IDE Integration (MCP)
+
+For **Cursor**, **Windsurf**, or Claude Code without skills:
+
+```bash
+weasel mcp add                      # auto-detect all installed IDEs
+weasel mcp add --target cursor      # Cursor only
+weasel mcp add --target windsurf    # Windsurf only
+weasel mcp add --target claude      # Claude Code only
+```
+
+| IDE         | MCP Tools | Skills                      |
+| ----------- | --------- | --------------------------- |
+| Claude Code | ✅        | ✅ (via `/plugin install`)  |
+| Cursor      | ✅        | ❌                          |
+| Windsurf    | ✅        | ❌                          |
+
+MCP tools (`weasel_analyze`, `weasel_finding_details`, `weasel_detectors`) work in all IDEs. Skills (PoC writing, report formatting, etc.) are Claude Code exclusive.
 
 ---
 

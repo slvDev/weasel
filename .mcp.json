@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "weasel": {
+      "type": "stdio",
+      "command": "weasel",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
