@@ -275,6 +275,9 @@ impl AnalysisEngine {
             crate::detectors::gas::UnsafeArrayAccessDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::VariableInsideLoopDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::BoolStorageDetector::default(),
         ));
         self.register_detector(Arc::new(
