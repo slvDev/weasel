@@ -1,3 +1,4 @@
+pub mod address_this_precalculation;
 pub mod address_zero_check;
 pub mod array_compound_assignment;
 pub mod array_length_in_loop;
@@ -28,6 +29,7 @@ pub mod should_be_immutable;
 pub mod use_erc721a;
 pub mod weth_address_definition;
 
+pub use address_this_precalculation::AddressThisPrecalculationDetector;
 pub use address_zero_check::AddressZeroCheckDetector;
 pub use array_compound_assignment::ArrayCompoundAssignmentDetector;
 pub use array_length_in_loop::ArrayLengthInLoopDetector;
