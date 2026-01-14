@@ -278,6 +278,9 @@ impl AnalysisEngine {
             crate::detectors::gas::BoolStorageDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::CachedConstantDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::CalldataInsteadOfMemoryDetector::default(),
         ));
         self.register_detector(Arc::new(
