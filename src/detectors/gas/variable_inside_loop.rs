@@ -1,7 +1,6 @@
 use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::models::FindingData;
 use crate::utils::ast_utils::find_statement_types;
 use solang_parser::pt::Statement;
 use std::sync::Arc;
