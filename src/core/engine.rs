@@ -293,6 +293,9 @@ impl AnalysisEngine {
             crate::detectors::gas::CombineMappingsDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::CountDownLoopDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::UncheckedLoopIncrementDetector::default(),
         ));
         self.register_detector(Arc::new(
