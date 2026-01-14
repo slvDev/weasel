@@ -1,5 +1,6 @@
 pub mod address_this_precalculation;
 pub mod address_zero_check;
+pub mod assembly_storage_write;
 pub mod array_compound_assignment;
 pub mod array_length_in_loop;
 pub mod avoid_contract_existence_checks;
@@ -31,6 +32,7 @@ pub mod weth_address_definition;
 
 pub use address_this_precalculation::AddressThisPrecalculationDetector;
 pub use address_zero_check::AddressZeroCheckDetector;
+pub use assembly_storage_write::AssemblyStorageWriteDetector;
 pub use array_compound_assignment::ArrayCompoundAssignmentDetector;
 pub use array_length_in_loop::ArrayLengthInLoopDetector;
 pub use avoid_contract_existence_checks::AvoidContractExistenceChecksDetector;

@@ -254,6 +254,9 @@ impl AnalysisEngine {
             crate::detectors::gas::AddressZeroCheckDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::AssemblyStorageWriteDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::ArrayCompoundAssignmentDetector::default(),
         ));
         self.register_detector(Arc::new(
