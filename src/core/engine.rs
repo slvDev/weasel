@@ -251,6 +251,9 @@ impl AnalysisEngine {
             crate::detectors::gas::AddressThisPrecalculationDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::gas::AssemblyAbiDecodeDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::gas::AddressZeroCheckDetector::default(),
         ));
         self.register_detector(Arc::new(

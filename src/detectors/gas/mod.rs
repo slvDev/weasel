@@ -1,4 +1,5 @@
 pub mod address_this_precalculation;
+pub mod assembly_abi_decode;
 pub mod address_zero_check;
 pub mod assembly_storage_write;
 pub mod array_compound_assignment;
@@ -37,6 +38,7 @@ pub mod use_erc721a;
 pub mod weth_address_definition;
 
 pub use address_this_precalculation::AddressThisPrecalculationDetector;
+pub use assembly_abi_decode::AssemblyAbiDecodeDetector;
 pub use address_zero_check::AddressZeroCheckDetector;
 pub use assembly_storage_write::AssemblyStorageWriteDetector;
 pub use array_compound_assignment::ArrayCompoundAssignmentDetector;
