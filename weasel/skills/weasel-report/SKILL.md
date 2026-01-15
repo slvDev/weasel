@@ -13,14 +13,63 @@ Expert in formatting security findings as professional audit reports.
 - User asks to write up a finding
 - User wants to format for submission
 
+## When NOT to Use
+
+- User is still exploring/validating (→ weasel-validate)
+- User wants to find vulnerabilities (→ weasel-analyzer)
+- User wants a PoC first (→ weasel-poc)
+- Vulnerability hasn't been confirmed yet
+
 ## Process
 
 1. **Gather info** - What's the vuln? Which contract/function? Severity?
 2. **Read code** - Get exact lines and context
-3. **Format report** - Use template below
+3. **Write report to file** - Create markdown file (see File Output below)
 4. **PoC decision** - Auto-include if High severity or already written
 
 **Do NOT** run Weasel analysis - user already found the bug!
+
+## File Output (CRITICAL)
+
+**ALWAYS write report to a file. NEVER output report content to terminal.**
+
+### File Naming
+```
+findings/
+├── H-01-reentrancy-in-withdraw.md
+├── H-02-access-control-bypass.md
+├── M-01-unchecked-return-value.md
+└── ...
+```
+
+**Pattern:** `<SEVERITY>-<NUMBER>-<short-description>.md`
+
+### Single Finding
+```bash
+# Create file
+findings/H-01-reentrancy-in-withdraw.md
+```
+
+### Multiple Findings
+Ask user: "Create separate files per finding, or one combined report?"
+- **Separate:** `findings/H-01-xxx.md`, `findings/M-01-yyy.md` (better for submission)
+- **Combined:** `findings/audit-report.md` (all findings in one file)
+
+### After Writing
+Confirm to user:
+```
+Report written: findings/H-01-reentrancy-in-withdraw.md
+```
+
+### Rationalizations to Reject
+
+| Rationalization | Why It's Wrong |
+|-----------------|----------------|
+| "I'll output to terminal so user can review first" | User can review the file. Terminal output gets lost. |
+| "It's just one finding, doesn't need a file" | Even one finding needs a file for submission/tracking. |
+| "User didn't specify a path" | Use `findings/` directory by default. |
+| "I'll paste the full PoC for completeness" | Link is complete. Full code bloats report. |
+| "User's custom format had ## POC section" | Custom format doesn't mean paste code. Still use link. |
 
 ## Report Template
 
@@ -58,9 +107,28 @@ function withdraw(uint256 amount) external nonReentrant {
 }
 \`\`\`
 
-### PoC (omit if none)
-See: test/Contract.t.sol::test_VulnName_PoC
+### PoC
+See: `test/Contract.t.sol::test_VulnName_PoC`
 ```
+
+## PoC Section Rules
+
+**Default: Link only, not full code.**
+
+```markdown
+## PoC
+See: `test/Vault.t.sol::test_Reentrancy_PoC`
+```
+
+**Why link-only by default:**
+- Report tells the story, PoC file proves it
+- Pasting 50+ lines of test code bloats report
+- PoC file can be run directly, pasted code cannot
+
+**Exception:** Include inline PoC only if:
+- User explicitly asks for full code in report
+- Submission platform requires inline PoC (some bug bounties)
+- PoC is very short (<15 lines)
 
 ## Title Conventions
 

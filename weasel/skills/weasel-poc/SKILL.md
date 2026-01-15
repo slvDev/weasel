@@ -36,9 +36,54 @@ Expert in creating proof-of-concept exploits for smart contract vulnerabilities.
 
 ### Code Style
 - **Numbered steps** with comments explaining logic (not every line)
-- **No spam logs** - avoid excessive banners or celebration messages
-- Console logs should be dev-focused (balances, state changes)
+- **Assertions prove the vulnerability** - not console output
 - The report tells the story, the PoC just proves it
+
+### Console Output Rules (CRITICAL)
+
+**NEVER use console.log/println/print for:**
+- Celebration/confirmation: `"✓ CONFIRMED"`, `"VULNERABILITY FOUND"`, `"SUCCESS"`
+- Banners: `"=== Results ==="`, `"--- Attack ---"`, `"******"`
+- Explanatory text: `"Impact: funds stolen"`, `"Attack complete"`
+- Checkmarks, emojis, X marks, or decorative output
+- Summaries of what happened
+
+**Assertions prove the vulnerability, not console output.**
+
+```solidity
+// BAD - spam that adds nothing
+console.log("=== ATTACK RESULTS ===");
+console.log("✓ CONFIRMED: Reentrancy vulnerability");
+console.log("  - Attacker profit:", profit);
+console.log("  - Victim loss:", loss);
+console.log("VULNERABILITY PROVEN");
+
+// GOOD - assertions speak for themselves
+assertGt(attacker.balance, initialBalance, "Attacker should profit");
+assertEq(vault.balance, 0, "Vault should be drained");
+```
+
+**Only acceptable console output:**
+- Debugging values during development: `console.log("balance:", bal)` — remove before final
+- Complex multi-step traces when assertion alone is unclear
+
+### Pre-Commit Checklist
+
+Before finalizing PoC, verify:
+- [ ] Zero console output with ✓, ===, "CONFIRMED", "VULNERABILITY", "ATTACK", "SUCCESS"
+- [ ] Zero banners, celebration messages, or summaries
+- [ ] Numbered step comments (`// 1.`, `// 2.`, `// 3.`)
+- [ ] Assertions prove the impact (not console.log)
+- [ ] Test name is descriptive: `test_<VulnType>_<WhatItProves>_PoC`
+
+### Rationalizations to Reject
+
+| Rationalization | Why It's Wrong |
+|-----------------|----------------|
+| "Console output helps explain the attack" | That's what the report is for. PoC proves, report explains. |
+| "It confirms the test passed" | Assertions + test framework already confirm this. |
+| "It makes the output clearer" | It makes it noisy. Clean PoC = assertions only. |
+| "Just a few logs won't hurt" | They train bad habits and pollute output. Zero tolerance. |
 
 ## PoC Structure
 
