@@ -374,6 +374,9 @@ impl AnalysisEngine {
 
         // NC detectors
         self.register_detector(Arc::new(
+            crate::detectors::nc::AbstractInSeparateFileDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::ArrayIndicesDetector::default(),
         ));
         self.register_detector(Arc::new(

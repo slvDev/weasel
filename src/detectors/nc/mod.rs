@@ -1,3 +1,4 @@
+pub mod abstract_in_separate_file;
 pub mod abi_encode_call;
 pub mod abicoder_v2;
 pub mod array_indices;
@@ -53,6 +54,7 @@ pub mod uppercase_non_constant;
 pub mod while_true_loop;
 pub mod zero_initialization;
 
+pub use abstract_in_separate_file::AbstractInSeparateFileDetector;
 pub use abi_encode_call::AbiEncodeCallDetector;
 pub use abicoder_v2::UnnecessaryAbiCoderV2Detector;
 pub use array_indices::ArrayIndicesDetector;
