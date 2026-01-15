@@ -13,12 +13,20 @@ Project overview and audit scoping for security engineers starting a new audit.
 - User asks "what does this project do?"
 - User wants to scope/understand a codebase
 
+## When NOT to Use
+
+- User wants to run static analysis (→ weasel-analyzer)
+- User wants to explain specific code (→ weasel-explainer)
+- User already understands the project and wants to audit
+
 ## Process
 
 ### 1. Read Documentation
 - README.md - project description, architecture
 - docs/ folder if exists
 - Comments in main contracts
+- **Previous audits** - Check for `audit/`, `audits/`, or audit reports
+- **Known issues** - Check `known-issues.md`, issue tracker links
 
 ### 2. Map Project Structure
 - List all .sol files
@@ -120,3 +128,14 @@ Offer:
 - "Run Weasel static analysis?"
 - "Deep dive into [highest risk contract]?"
 - "Explain specific function?"
+
+## Rationalizations to Reject
+
+| Rationalization | Why It's Wrong |
+|-----------------|----------------|
+| "I'll skip the libraries, they're standard" | Libraries can be modified or misused. Note them. |
+| "This looks like a simple project" | Simple projects can have complex bugs. Be thorough. |
+| "README explains everything" | README can be outdated. Verify against actual code. |
+| "I'll focus only on the main contract" | Entry points can be anywhere. Map ALL external functions. |
+| "Previous audit means it's safe" | Previous audits miss things. Note them, don't rely on them. |
+| "I understand the pattern, no need to map it" | Every implementation differs. Map THIS codebase. |

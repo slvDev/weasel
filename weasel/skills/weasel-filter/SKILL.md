@@ -16,6 +16,12 @@ Expert in filtering false positives from Weasel static analysis output.
 - User asks to triage/clean the report
 - User asks "are these findings real?"
 
+## When NOT to Use
+
+- No Weasel analysis has been run yet (→ weasel-analyzer first)
+- User wants to validate their OWN attack idea (→ weasel-validate)
+- User wants deeper manual review (→ weasel-analyzer in Review Mode)
+
 ## Filtering Strategy
 
 ### Priority Triage
@@ -72,11 +78,12 @@ When report file already exists (user ran weasel with output flag):
 
 For each finding to verify:
 
-1. **Read the code** - Use Read tool at the reported location
-2. **Understand context** - Check surrounding functions, modifiers
-3. **Check for guards** - Look for existing protections
-4. **Assess exploitability** - Can this actually be exploited?
-5. **Verdict** - Confirmed or False Positive
+1. **Check known issues** - Is this documented in README or known-issues.md?
+2. **Read the code** - Use Read tool at the reported location
+3. **Understand context** - Check surrounding functions, modifiers
+4. **Check for guards** - Look for existing protections
+5. **Assess exploitability** - Can this actually be exploited?
+6. **Verdict** - Confirmed, False Positive, or Known Issue
 
 ## Verification Checklists
 
@@ -142,3 +149,14 @@ Ask user:
 - "Found X confirmed issues. Want me to write reports for them?"
 - "Want me to add PoCs for High severity findings?"
 - "Should I explain any of these in more detail?"
+
+## Rationalizations to Reject
+
+| Rationalization | Why It's Wrong |
+|-----------------|----------------|
+| "This detector usually has false positives" | Check THIS instance. Each case is different. |
+| "The code looks safe" | READ the code. Don't judge by appearance. |
+| "I'll mark as FP without reading" | ALWAYS read source code before verdict. |
+| "SafeERC20 is used, so all transfer issues are FP" | Verify SafeERC20 is actually used at THAT location. |
+| "This is a known pattern, must be fine" | Known patterns can still have implementation bugs. |
+| "I'll confirm all High severity to be safe" | False positives waste developer time. Verify properly. |

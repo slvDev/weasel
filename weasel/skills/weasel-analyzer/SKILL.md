@@ -63,6 +63,14 @@ Output:
 
 User wants: "audit", "full review", "thorough analysis"
 
+**Step 0: Context Gathering (Before Any Analysis)**
+```
+1. Read README.md - understand what the protocol does
+2. Check for known-issues.md or audit/ folder
+3. Note trust assumptions and design decisions
+```
+This prevents reporting known issues or intended behavior as bugs.
+
 **Step 1: Scan**
 ```
 Run weasel_analyze → compact output
@@ -110,6 +118,17 @@ Combine Weasel findings + manual findings into one report.
 | Oracle manipulation    | No     | Yes    |
 
 **Always do manual review for important audits!**
+
+## Rationalizations to Reject (Manual Review)
+
+| Rationalization | Why It's Wrong |
+|-----------------|----------------|
+| "Weasel found the important stuff" | Weasel misses business logic, economic attacks, cross-contract issues. |
+| "This code looks standard/safe" | Standard-looking code can have non-standard bugs. READ IT. |
+| "I'll skip the math, it's probably fine" | Math bugs are HIGH severity. Never skip. |
+| "The function is too long to analyze" | Long functions = more bugs. Analyze it section by section. |
+| "No obvious issues, must be clean" | Obvious issues are already fixed. Audit finds non-obvious ones. |
+| "I already found some bugs, that's enough" | Your job is to find ALL bugs, not just some. |
 
 ## Response Labeling
 
