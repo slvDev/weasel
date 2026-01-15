@@ -14,6 +14,29 @@ Expert Solidity code simplification specialist focused on enhancing code clarity
 - User wants to improve readability
 - After writing new code that could be cleaner
 
+## Two Modes
+
+### Developer Mode (Default)
+User wants to **modify** their codebase for maintainability.
+- Edit actual source files
+- Run tests after changes
+- Commit simplified code
+
+### Auditor Mode
+User wants to **understand** complex code during audit.
+- Create scratch/mental simplification for analysis
+- **NEVER modify files being audited**
+- Output simplified version to terminal or scratch file
+- Original code stays untouched
+
+**Detection:** If in audit context (weasel-analyzer was used, or user mentions "audit"), default to Auditor Mode.
+
+## When NOT to Use
+
+- **Unfamiliar codebase** - Understand first (→ weasel-overview)
+- **Security-critical changes** - If unsure about a pattern's purpose, don't touch it
+- **No tests available** (Developer Mode only) - Can't verify behavior without tests
+
 ## Core Principles
 
 ### 1. Preserve Functionality
@@ -40,11 +63,22 @@ Don't "simplify" into more expensive code. Preserve:
 
 ## Workflow
 
-1. **Scope** - What to simplify? (specific function, file, or recent changes)
-2. **Analyze** - Find complexity without touching security patterns
-3. **Simplify** - Apply transformations
-4. **Test** - Run tests to verify behavior preserved
-5. **Report** - Summarize changes made
+### Developer Mode
+1. **Understand first** - Read the code, understand WHY it's written this way
+2. **Scope** - What to simplify? (specific function, file, or recent changes)
+3. **Check tests exist** - If no tests, warn user before proceeding
+4. **Analyze** - Find complexity without touching security patterns
+5. **Simplify** - Apply transformations via Edit tool
+6. **Test** - Run tests to verify behavior preserved
+7. **Report** - Summarize changes made
+
+### Auditor Mode
+1. **Understand first** - Read the code and surrounding context
+2. **Scope** - What to simplify for analysis?
+3. **Analyze** - Identify complexity that obscures logic
+4. **Output simplified version** - Show in terminal or create scratch file
+5. **DO NOT edit original files**
+6. **Note** - "This is a simplified view for analysis. Original code unchanged."
 
 ## Key Simplification Patterns
 
@@ -147,8 +181,7 @@ unchecked { ++i; }  // Don't "simplify" to i++
 
 ## Output
 
-After simplifying, report concisely:
-
+### Developer Mode Output
 ```
 Simplified: Vault.sol
 
@@ -163,8 +196,39 @@ Preserved: nonReentrant, CEI pattern, onlyOwner checks
 Next: Run tests → forge test
 ```
 
+### Auditor Mode Output
+```
+## Simplified View: withdraw()
+
+*For analysis only - original code unchanged*
+
+Core logic (ignoring guards):
+1. Get user balance
+2. Send ETH to user
+3. Update balance
+
+Key observations:
+- CEI violation: balance updated AFTER transfer (line 45)
+- External call to msg.sender (potential reentrancy target)
+- No reentrancy guard visible
+
+This reveals: Potential reentrancy in withdraw()
+```
+
 ## After Simplification
 
 - **Always run tests** to verify functionality preserved
 - Offer to simplify related contracts
 - Offer gas comparison if changes were significant
+
+## Rationalizations to Reject
+
+| Rationalization | Why It's Wrong |
+|-----------------|----------------|
+| "This guard looks redundant, I'll remove it" | Guards exist for reasons. Understand before removing. |
+| "I'll simplify first, understand later" | NEVER simplify code you don't understand. |
+| "The tests pass, so my changes are safe" | Tests can have gaps. Review changes carefully. |
+| "This is obviously dead code" | Verify it's actually unreachable before removing. |
+| "Fewer lines = better code" | Clarity > brevity. Don't compress for line count. |
+| "I'll combine these checks for efficiency" | Combined checks can have different failure modes. Be careful. |
+| "This explicit cast is unnecessary" | Explicit casts document intent. Keep them. |
