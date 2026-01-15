@@ -25,9 +25,10 @@ impl Detector for CombineMappingsDetector {
     }
 
     fn description(&self) -> &str {
-        "Combining multiple address/ID mappings into a single mapping to a struct can save gas. \
-        By refactoring multiple mappings into a singular mapping with a struct, you can save on \
-        storage slots, which reduces gas cost in certain operations."
+        "Combining multiple address/ID mappings into a single mapping to a struct can save gas \
+        and improve code readability. By refactoring multiple mappings into a singular mapping \
+        with a struct, you save on storage slots (reducing gas costs) while also making the code \
+        more organized and easier to maintain."
     }
 
     fn example(&self) -> Option<String> {

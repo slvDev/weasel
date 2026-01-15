@@ -522,6 +522,9 @@ impl AnalysisEngine {
         ));
         self.register_detector(Arc::new(crate::detectors::nc::LineLengthDetector::default()));
         self.register_detector(Arc::new(
+            crate::detectors::nc::LongCalculationsDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::ExplicitNumTypesDetector::default(),
         ));
     }
