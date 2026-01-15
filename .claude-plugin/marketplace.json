@@ -14,7 +14,7 @@
       "name": "weasel",
       "description": "Solidity static analysis with security skills for auditing and secure development",
       "source": "./weasel",
-      "version": "0.4.0",
+      "version": "0.4.5",
       "author": {
         "name": "slvDev"
       },
