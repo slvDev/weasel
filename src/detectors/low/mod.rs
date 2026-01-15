@@ -41,6 +41,7 @@ pub mod unsafe_int_cast;
 pub mod unsafe_int_to_uint_cast;
 pub mod year_365_days;
 pub mod unsafe_low_level_call;
+pub mod upgradable_token_interface;
 pub mod zero_value_transfer;
 
 pub use assembly_optimizer_bug::AssemblyOptimizerBugDetector;
@@ -86,4 +87,5 @@ pub use unsafe_int_cast::UnsafeIntCastDetector;
 pub use unsafe_int_to_uint_cast::UnsafeIntToUintCastDetector;
 pub use year_365_days::Year365DaysDetector;
 pub use unsafe_low_level_call::UnsafeLowLevelCallDetector;
+pub use upgradable_token_interface::UpgradableTokenInterfaceDetector;
 pub use zero_value_transfer::ZeroValueTransferDetector;
