@@ -243,6 +243,9 @@ impl AnalysisEngine {
             crate::detectors::low::UninitializedUpgradeableDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::UnsafeLowLevelCallDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::Year365DaysDetector::default(),
         ));
         self.register_detector(Arc::new(
