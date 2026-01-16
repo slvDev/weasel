@@ -502,6 +502,9 @@ impl AnalysisEngine {
             crate::detectors::nc::EcrecoverVCheckDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::EmptyBlocksDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::ErrorDefinitionNoArgsDetector::default(),
         ));
         self.register_detector(Arc::new(
