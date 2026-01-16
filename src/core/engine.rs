@@ -530,6 +530,9 @@ impl AnalysisEngine {
             crate::detectors::nc::EventMissingIndexedArgsDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::ExternalCallInModifierDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::FunctionLengthDetector::default(),
         ));
         self.register_detector(Arc::new(
