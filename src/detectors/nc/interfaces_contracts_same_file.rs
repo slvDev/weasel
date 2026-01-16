@@ -107,29 +107,40 @@ mod tests {
     use crate::utils::test_utils::run_detector_on_code;
 
     #[test]
-    fn test_detects_interface_and_contract_in_same_file() {
+    fn test_detects_issue() {
         let code = r#"
             pragma solidity ^0.8.0;
 
-            interface TestInterface {
-                function test(uint256 fee) external;
+            interface IFirst {                      // Line 4 - interface in same file as contracts
+                function first() external;
             }
 
-            contract TestContract {
-                function test(uint256 fee) public {}
+            interface ISecond {                     // Line 8 - another interface
+                function second() external;
+            }
+
+            contract FirstContract {                // Line 12 - contract in same file as interfaces
+                function first() external {}
+            }
+
+            contract SecondContract {               // Line 16 - another contract
+                function second() external {}
             }
         "#;
 
         let detector = Arc::new(InterfacesContractsSameFileDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
 
-        assert_eq!(locations.len(), 2);
-        assert_eq!(locations[0].line, 4, "interface TestInterface");
-        assert_eq!(locations[1].line, 8, "contract TestContract");
+        assert_eq!(locations.len(), 4, "Should detect 2 interfaces and 2 contracts");
+        assert_eq!(locations[0].line, 4, "interface IFirst");
+        assert_eq!(locations[1].line, 8, "interface ISecond");
+        assert_eq!(locations[2].line, 12, "contract FirstContract");
+        assert_eq!(locations[3].line, 16, "contract SecondContract");
     }
 
     #[test]
-    fn test_no_detection_for_interface_only() {
+    fn test_skips_valid_code() {
+        // Test 1: Interface-only file
         let code = r#"
             pragma solidity ^0.8.0;
 
@@ -137,15 +148,11 @@ mod tests {
                 function test(uint256 fee) external;
             }
         "#;
-
         let detector = Arc::new(InterfacesContractsSameFileDetector::default());
         let locations = run_detector_on_code(detector, code, "ITest.sol");
+        assert_eq!(locations.len(), 0, "Should not detect interface-only file");
 
-        assert_eq!(locations.len(), 0);
-    }
-
-    #[test]
-    fn test_no_detection_for_contract_only() {
+        // Test 2: Contract-only file
         let code = r#"
             pragma solidity ^0.8.0;
 
@@ -153,15 +160,11 @@ mod tests {
                 function test(uint256 fee) public {}
             }
         "#;
-
         let detector = Arc::new(InterfacesContractsSameFileDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
+        assert_eq!(locations.len(), 0, "Should not detect contract-only file");
 
-        assert_eq!(locations.len(), 0);
-    }
-
-    #[test]
-    fn test_ignores_abstract_contracts_and_libraries() {
+        // Test 3: Abstract contracts and libraries (not flagged)
         let code = r#"
             pragma solidity ^0.8.0;
 
@@ -173,38 +176,8 @@ mod tests {
                 function helper() internal pure {}
             }
         "#;
-
         let detector = Arc::new(InterfacesContractsSameFileDetector::default());
         let locations = run_detector_on_code(detector, code, "test.sol");
-
-        assert_eq!(locations.len(), 0);
-    }
-
-    #[test]
-    fn test_detects_multiple_interfaces_and_contracts() {
-        let code = r#"
-            pragma solidity ^0.8.0;
-
-            interface IFirst {
-                function first() external;
-            }
-
-            interface ISecond {
-                function second() external;
-            }
-
-            contract FirstContract {
-                function first() external {}
-            }
-
-            contract SecondContract {
-                function second() external {}
-            }
-        "#;
-
-        let detector = Arc::new(InterfacesContractsSameFileDetector::default());
-        let locations = run_detector_on_code(detector, code, "test.sol");
-
-        assert_eq!(locations.len(), 4);
+        assert_eq!(locations.len(), 0, "Should ignore abstract contracts and libraries");
     }
 }
