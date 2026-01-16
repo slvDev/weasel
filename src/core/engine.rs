@@ -461,6 +461,9 @@ impl AnalysisEngine {
             crate::detectors::nc::DefaultVisibilityDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::DeleteInsteadOfFalseDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::DeprecatedSafeMathDetector::default(),
         ));
         self.register_detector(Arc::new(
