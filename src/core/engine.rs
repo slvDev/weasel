@@ -401,6 +401,9 @@ impl AnalysisEngine {
             crate::detectors::nc::InitializerEmitEventDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::InitialismCapitalizationDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::ControlStructureStyleDetector::default(),
         ));
         self.register_detector(Arc::new(
