@@ -368,6 +368,7 @@ fn find_in_expression_recursive<F>(
         | Expression::Multiply(_, left, right)
         | Expression::Divide(_, left, right)
         | Expression::Modulo(_, left, right)
+        | Expression::Power(_, left, right)
         | Expression::Assign(_, left, right) => {
             find_in_expression_recursive(left, file, detector_id, predicate, findings);
             find_in_expression_recursive(right, file, detector_id, predicate, findings);
@@ -595,10 +596,12 @@ fn get_expression_location(expr: &Expression) -> Option<Loc> {
         | Expression::Multiply(loc, _, _)
         | Expression::Divide(loc, _, _)
         | Expression::Modulo(loc, _, _)
+        | Expression::Power(loc, _, _)
         | Expression::Assign(loc, _, _)
         | Expression::Parenthesis(loc, _)
         | Expression::Negate(loc, _)
-        | Expression::FunctionCall(loc, _, _) => Some(loc.clone()),
+        | Expression::FunctionCall(loc, _, _)
+        | Expression::NumberLiteral(loc, _, _, _) => Some(loc.clone()),
         Expression::Variable(ident) => Some(ident.loc.clone()),
         _ => None,
     }

@@ -1,5 +1,6 @@
 pub mod assembly_optimizer_bug;
 pub mod block_timestamp_deadline;
+pub mod constant_decimals;
 pub mod curve_calc_token_amount;
 pub mod decimals_type;
 pub mod deprecated_abi_encoder_v2;
@@ -46,6 +47,7 @@ pub mod zero_value_transfer;
 
 pub use assembly_optimizer_bug::AssemblyOptimizerBugDetector;
 pub use block_timestamp_deadline::BlockTimestampDeadlineDetector;
+pub use constant_decimals::ConstantDecimalsDetector;
 pub use curve_calc_token_amount::CurveCalcTokenAmountDetector;
 pub use decimals_type::DecimalsTypeDetector;
 pub use deprecated_abi_encoder_v2::DeprecatedAbiEncoderV2Detector;

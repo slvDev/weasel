@@ -129,6 +129,9 @@ impl AnalysisEngine {
             crate::detectors::low::BlockTimestampDeadlineDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::low::ConstantDecimalsDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::low::CurveCalcTokenAmountDetector::default(),
         ));
         self.register_detector(Arc::new(
