@@ -440,6 +440,9 @@ impl AnalysisEngine {
             crate::detectors::nc::NamedMappingsDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::NamedReturnsDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::NonReentrantBeforeModifiersDetector::default(),
         ));
         self.register_detector(Arc::new(
