@@ -1649,7 +1649,49 @@ pub fn is_complex_type_structure(expr: &Expression) -> bool {
             // Check for chained member access (e.g., order.user.name)
             matches!(base.as_ref(), Expression::MemberAccess(_, _, _))
         }
-        
+
         _ => false,
     }
+}
+
+/// Internal Solidity base objects that are not external calls
+const INTERNAL_BASES: [&str; 5] = ["abi", "super", "this", "type", "msg"];
+
+/// Built-in array/bytes methods that are not external calls
+const BUILTIN_METHODS: [&str; 4] = ["push", "pop", "concat", "length"];
+
+/// Check if a function call expression is an external call.
+/// Returns false for internal Solidity calls like abi.*, super.*, this.*,
+/// built-in array methods (push, pop), etc.
+pub fn is_external_call(expr: &Expression) -> bool {
+    let Expression::FunctionCall(_, func_expr, _) = expr else {
+        return false;
+    };
+
+    let Expression::MemberAccess(_, base_expr, member) = func_expr.as_ref() else {
+        return false;
+    };
+
+    // Check for built-in methods (push, pop, concat)
+    if BUILTIN_METHODS.contains(&member.name.as_str()) {
+        return false;
+    }
+
+    // Check for internal base objects (abi, super, this, type, msg)
+    if let Expression::Variable(id) = base_expr.as_ref() {
+        if INTERNAL_BASES.contains(&id.name.as_str()) {
+            return false;
+        }
+    }
+
+    // Check for type(...).method calls like type(uint256).max
+    if let Expression::FunctionCall(_, type_func, _) = base_expr.as_ref() {
+        if let Expression::Variable(id) = type_func.as_ref() {
+            if id.name == "type" {
+                return false;
+            }
+        }
+    }
+
+    true
 }

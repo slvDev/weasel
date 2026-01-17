@@ -434,6 +434,9 @@ impl AnalysisEngine {
             crate::detectors::nc::MissingSpdxDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::NamedFunctionArgsDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::NamedMappingsDetector::default(),
         ));
         self.register_detector(Arc::new(

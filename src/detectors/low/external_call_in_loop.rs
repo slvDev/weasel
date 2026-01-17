@@ -1,6 +1,6 @@
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::utils::ast_utils::find_in_statement;
+use crate::utils::ast_utils::{find_in_statement, is_external_call};
 use crate::core::visitor::ASTVisitor;
 use solang_parser::pt::{Expression, Statement};
 use std::sync::Arc;
@@ -56,13 +56,7 @@ function distributeRewards(address[] memory recipients) public {
             }
 
             // Find external function calls in for-loop body
-            find_in_statement(body, file, self.id(), |expr| {
-                // Check for member access function calls (external calls)
-                if let Expression::FunctionCall(_, func_expr, _) = expr {
-                    return matches!(func_expr.as_ref(), Expression::MemberAccess(_, _, _));
-                }
-                false
-            })
+            find_in_statement(body, file, self.id(), is_external_call)
         });
     }
 }

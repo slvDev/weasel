@@ -1,8 +1,8 @@
 use crate::detectors::Detector;
 use crate::models::severity::Severity;
-use crate::utils::ast_utils::find_in_statement;
+use crate::utils::ast_utils::{find_in_statement, is_external_call};
 use crate::core::visitor::ASTVisitor;
-use solang_parser::pt::{Expression, FunctionTy, Identifier};
+use solang_parser::pt::FunctionTy;
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
@@ -61,26 +61,8 @@ modifier onlyOwner() {
                 return Vec::new();
             };
 
-            find_in_statement(body, file, self.id(), |expr| {
-                Self::is_external_call(expr)
-            })
+            find_in_statement(body, file, self.id(), is_external_call)
         });
-    }
-}
-
-impl ExternalCallInModifierDetector {
-    fn is_external_call(expr: &Expression) -> bool {
-        if let Expression::FunctionCall(_, func_expr, _) = expr {
-            if let Expression::MemberAccess(_, base_expr, _) = func_expr.as_ref() {
-                // Skip this.something() calls - those are internal
-                if matches!(base_expr.as_ref(), Expression::Variable(Identifier { name, .. }) if name == "this")
-                {
-                    return false;
-                }
-                return true;
-            }
-        }
-        false
     }
 }
 
