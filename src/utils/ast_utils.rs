@@ -601,7 +601,8 @@ fn get_expression_location(expr: &Expression) -> Option<Loc> {
         | Expression::Parenthesis(loc, _)
         | Expression::Negate(loc, _)
         | Expression::FunctionCall(loc, _, _)
-        | Expression::NumberLiteral(loc, _, _, _) => Some(loc.clone()),
+        | Expression::NumberLiteral(loc, _, _, _)
+        | Expression::BoolLiteral(loc, _) => Some(loc.clone()),
         Expression::Variable(ident) => Some(ident.loc.clone()),
         _ => None,
     }
