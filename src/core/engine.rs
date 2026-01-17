@@ -383,6 +383,9 @@ impl AnalysisEngine {
             crate::detectors::nc::ArrayIndicesDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::ArrayRangedGetterDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::BoolInitFalseDetector::default(),
         ));
         self.register_detector(Arc::new(
