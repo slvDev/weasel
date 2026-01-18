@@ -425,6 +425,9 @@ impl AnalysisEngine {
             crate::detectors::nc::ManyFunctionParamsDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::ManyReturnValuesDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::MappingStyleDetector::default(),
         ));
         self.register_detector(Arc::new(
