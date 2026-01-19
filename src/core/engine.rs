@@ -485,6 +485,9 @@ impl AnalysisEngine {
             crate::detectors::nc::UnderscorePrefixDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::UnnamedRevertDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::UnusedOverrideParamsDetector::default(),
         ));
         self.register_detector(Arc::new(
