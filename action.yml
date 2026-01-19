@@ -1,0 +1,103 @@
+name: 'Weasel'
+description: 'Static analysis for Solidity smart contracts'
+author: 'slvDev'
+
+branding:
+  icon: 'shield'
+  color: 'orange'
+
+inputs:
+  path:
+    description: 'Path to analyze (file or directory)'
+    required: false
+    default: '.'
+  min-severity:
+    description: 'Minimum severity to report (High, Medium, Low, Gas, NC)'
+    required: false
+    default: 'Low'
+  fail-on:
+    description: 'Fail if findings at this severity or higher (High, Medium, Low, none)'
+    required: false
+    default: 'none'
+  exclude:
+    description: 'Paths to exclude (comma-separated)'
+    required: false
+    default: ''
+  config:
+    description: 'Path to weasel.toml config file'
+    required: false
+    default: ''
+
+outputs:
+  findings:
+    description: 'Number of findings'
+    value: ${{ steps.weasel.outputs.findings }}
+  report:
+    description: 'Path to the report file'
+    value: ${{ steps.weasel.outputs.report }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Weasel
+      shell: bash
+      run: |
+        curl -sSL https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
+        echo "$HOME/.weasel/bin" >> $GITHUB_PATH
+
+    - name: Run Weasel
+      id: weasel
+      shell: bash
+      run: |
+        ARGS="run --scope ${{ inputs.path }} --min-severity ${{ inputs.min-severity }} --format json --output weasel-report"
+
+        if [ -n "${{ inputs.exclude }}" ]; then
+          IFS=',' read -ra EXCLUDES <<< "${{ inputs.exclude }}"
+          for exc in "${EXCLUDES[@]}"; do
+            ARGS="$ARGS --exclude $exc"
+          done
+        fi
+
+        if [ -n "${{ inputs.config }}" ]; then
+          ARGS="$ARGS --config ${{ inputs.config }}"
+        fi
+
+        weasel $ARGS || true
+
+        # Count findings
+        if [ -f weasel-report.json ]; then
+          FINDINGS=$(jq '.findings | length' weasel-report.json)
+          echo "findings=$FINDINGS" >> $GITHUB_OUTPUT
+          echo "report=weasel-report.json" >> $GITHUB_OUTPUT
+          echo "### Weasel found $FINDINGS issues" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "findings=0" >> $GITHUB_OUTPUT
+          echo "report=" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check fail condition
+      shell: bash
+      if: inputs.fail-on != 'none'
+      run: |
+        if [ ! -f weasel-report.json ]; then
+          exit 0
+        fi
+
+        FAIL_ON="${{ inputs.fail-on }}"
+
+        case $FAIL_ON in
+          High)
+            COUNT=$(jq '[.findings[] | select(.severity == "High")] | length' weasel-report.json)
+            ;;
+          Medium)
+            COUNT=$(jq '[.findings[] | select(.severity == "High" or .severity == "Medium")] | length' weasel-report.json)
+            ;;
+          Low)
+            COUNT=$(jq '[.findings[] | select(.severity == "High" or .severity == "Medium" or .severity == "Low")] | length' weasel-report.json)
+            ;;
+        esac
+
+        if [ "$COUNT" -gt 0 ]; then
+          echo "::error::Weasel found $COUNT findings at $FAIL_ON severity or higher"
+          exit 1
+        fi

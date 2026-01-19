@@ -222,6 +222,53 @@ remappings = ["@openzeppelin/=lib/openzeppelin-contracts/"]
 
 ---
 
+## GitHub Actions
+
+Run Weasel in your CI/CD pipeline:
+
+```yaml
+- uses: slvDev/weasel@v1
+```
+
+### Example Workflow
+
+```yaml
+name: Security
+
+on: [push, pull_request]
+
+jobs:
+  weasel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: slvDev/weasel@v1
+        with:
+          path: ./src
+          fail-on: High
+          exclude: test,mocks
+```
+
+### Inputs
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `path` | Path to analyze | `.` |
+| `min-severity` | Minimum severity to report | `Low` |
+| `fail-on` | Fail CI at this severity (`High`, `Medium`, `Low`, `none`) | `none` |
+| `exclude` | Paths to exclude (comma-separated) | |
+| `config` | Path to `weasel.toml` | |
+
+### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `findings` | Number of issues found |
+| `report` | Path to JSON report |
+
+---
+
 ## Project Support
 
 **Foundry** — Remappings loaded in order:
