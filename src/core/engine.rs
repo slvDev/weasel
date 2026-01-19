@@ -446,6 +446,9 @@ impl AnalysisEngine {
             crate::detectors::nc::MultipleContractsDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::MultipleInterfacesDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::NamedFunctionArgsDetector::default(),
         ));
         self.register_detector(Arc::new(
