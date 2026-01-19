@@ -79,6 +79,7 @@ pub mod unused_override_params;
 pub mod unused_private_function;
 pub mod uppercase_non_constant;
 pub mod while_true_loop;
+pub mod zero_argument;
 pub mod zero_initialization;
 
 pub use abstract_in_separate_file::AbstractInSeparateFileDetector;
@@ -162,4 +163,5 @@ pub use unused_override_params::UnusedOverrideParamsDetector;
 pub use unused_private_function::UnusedPrivateFunctionDetector;
 pub use uppercase_non_constant::UppercaseNonConstantDetector;
 pub use while_true_loop::WhileTrueLoopDetector;
+pub use zero_argument::ZeroArgumentDetector;
 pub use zero_initialization::ZeroInitializationDetector;
