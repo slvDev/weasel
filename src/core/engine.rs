@@ -532,6 +532,9 @@ impl AnalysisEngine {
             crate::detectors::nc::DuplicateRequireDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::DuplicateStringLiteralDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::EcrecoverVCheckDetector::default(),
         ));
         self.register_detector(Arc::new(

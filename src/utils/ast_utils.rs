@@ -2,15 +2,20 @@ use std::collections::HashSet;
 
 use crate::{
     models::{
-        ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter, FunctionInfo, FunctionMutability, FunctionParameter, FunctionType, FunctionVisibility, ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StateVariableInfo, StructField, StructInfo, TypeDefinitionInfo, TypeInfo, UsingDirectiveInfo, VariableMutability, VariableVisibility, finding::{FindingData, Location}
+        finding::{FindingData, Location},
+        ContractInfo, ContractType, EnumInfo, ErrorInfo, ErrorParameter, EventInfo, EventParameter,
+        FunctionInfo, FunctionMutability, FunctionParameter, FunctionType, FunctionVisibility,
+        ImportInfo, ModifierInfo, ModifierParameter, SolidityFile, StateVariableInfo, StructField,
+        StructInfo, TypeDefinitionInfo, TypeInfo, UsingDirectiveInfo, VariableMutability,
+        VariableVisibility,
     },
     utils::location::loc_to_location,
 };
 use solang_parser::pt::{
-    CatchClause, ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition, EventDefinition,
-    Expression, FunctionAttribute, FunctionDefinition, FunctionTy, Import, Loc, Mutability,
-    PragmaDirective, Statement, StructDefinition, Type, TypeDefinition, Using, UsingList,
-    VariableDeclaration, VariableDefinition, VersionComparator, VersionOp, Visibility,
+    CatchClause, ContractDefinition, ContractPart, EnumDefinition, ErrorDefinition,
+    EventDefinition, Expression, FunctionAttribute, FunctionDefinition, FunctionTy, Import, Loc,
+    Mutability, PragmaDirective, Statement, StructDefinition, Type, TypeDefinition, Using,
+    UsingList, VariableDeclaration, VariableDefinition, VersionComparator, VersionOp, Visibility,
 };
 fn find_locations_in_expression_recursive<P>(
     expression: &Expression,
@@ -543,7 +548,13 @@ fn find_statement_types_recursive<F>(
         }
         Statement::Try(_, _, returns_opt, catch_clauses) => {
             if let Some((_, returns_block)) = returns_opt {
-                find_statement_types_recursive(returns_block, file, detector_id, predicate, findings);
+                find_statement_types_recursive(
+                    returns_block,
+                    file,
+                    detector_id,
+                    predicate,
+                    findings,
+                );
             }
             for clause in catch_clauses {
                 let clause_stmt = match clause {
@@ -604,6 +615,7 @@ fn get_expression_location(expr: &Expression) -> Option<Loc> {
         | Expression::NumberLiteral(loc, _, _, _)
         | Expression::BoolLiteral(loc, _) => Some(loc.clone()),
         Expression::Variable(ident) => Some(ident.loc.clone()),
+        Expression::StringLiteral(parts) => parts.first().map(|p| p.loc.clone()),
         _ => None,
     }
 }
@@ -624,7 +636,10 @@ pub fn find_variable_uses(var_name: &str, body: &Statement, file: &SolidityFile)
 }
 
 /// Get all local variable names in a function (parameters + return params + declarations)
-pub fn get_local_variable_names(func_def: &FunctionDefinition, body: &Statement) -> HashSet<String> {
+pub fn get_local_variable_names(
+    func_def: &FunctionDefinition,
+    body: &Statement,
+) -> HashSet<String> {
     let mut local_vars = HashSet::new();
 
     // Add function parameters
@@ -819,7 +834,10 @@ pub fn collect_function_calls_from_expr(expr: &Expression, calls: &mut HashSet<S
 }
 
 /// Process a single import directive
-pub fn process_import_directive(import: &Import, file: &SolidityFile) -> Result<ImportInfo, String> {
+pub fn process_import_directive(
+    import: &Import,
+    file: &SolidityFile,
+) -> Result<ImportInfo, String> {
     use solang_parser::pt::ImportPath;
 
     // Extract import path, symbols, and location based on import type
@@ -920,7 +938,10 @@ pub fn extract_solidity_version_from_pragma(pragma: &PragmaDirective) -> Option<
 }
 
 /// Extract variable information from a variable definition
-pub fn extract_variable_info(var_def: &VariableDefinition, file: &SolidityFile) -> StateVariableInfo {
+pub fn extract_variable_info(
+    var_def: &VariableDefinition,
+    file: &SolidityFile,
+) -> StateVariableInfo {
     let loc = loc_to_location(&var_def.loc, file);
 
     let name = var_def
@@ -978,7 +999,10 @@ pub fn extract_variable_info(var_def: &VariableDefinition, file: &SolidityFile) 
 }
 
 /// Extract state variables from a contract definition
-pub fn extract_state_variables(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<StateVariableInfo> {
+pub fn extract_state_variables(
+    contract_def: &ContractDefinition,
+    file: &SolidityFile,
+) -> Vec<StateVariableInfo> {
     contract_def
         .parts
         .iter()
@@ -1008,15 +1032,14 @@ pub fn extract_enum_info(enum_def: &EnumDefinition, file: &SolidityFile) -> Enum
         .filter_map(|value| value.as_ref().map(|id| id.name.clone()))
         .collect();
 
-    EnumInfo {
-        loc,
-        name,
-        values,
-    }
+    EnumInfo { loc, name, values }
 }
 
 /// Extract enums from a contract definition
-pub fn extract_contract_enums(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<EnumInfo> {
+pub fn extract_contract_enums(
+    contract_def: &ContractDefinition,
+    file: &SolidityFile,
+) -> Vec<EnumInfo> {
     contract_def
         .parts
         .iter()
@@ -1086,7 +1109,10 @@ pub fn extract_error_info(error_def: &ErrorDefinition, file: &SolidityFile) -> E
 }
 
 /// Extract errors from a contract definition
-pub fn extract_contract_errors(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<ErrorInfo> {
+pub fn extract_contract_errors(
+    contract_def: &ContractDefinition,
+    file: &SolidityFile,
+) -> Vec<ErrorInfo> {
     contract_def
         .parts
         .iter()
@@ -1129,7 +1155,10 @@ pub fn extract_event_info(event_def: &EventDefinition, file: &SolidityFile) -> E
 }
 
 /// Extract events from a contract definition
-pub fn extract_contract_events(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<EventInfo> {
+pub fn extract_contract_events(
+    contract_def: &ContractDefinition,
+    file: &SolidityFile,
+) -> Vec<EventInfo> {
     contract_def
         .parts
         .iter()
@@ -1162,15 +1191,14 @@ pub fn extract_struct_info(struct_def: &StructDefinition, file: &SolidityFile) -
         })
         .collect();
 
-    StructInfo {
-        loc,
-        name,
-        fields,
-    }
+    StructInfo { loc, name, fields }
 }
 
 /// Extract structs from a contract definition
-pub fn extract_contract_structs(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<StructInfo> {
+pub fn extract_contract_structs(
+    contract_def: &ContractDefinition,
+    file: &SolidityFile,
+) -> Vec<StructInfo> {
     contract_def
         .parts
         .iter()
@@ -1185,7 +1213,10 @@ pub fn extract_contract_structs(contract_def: &ContractDefinition, file: &Solidi
 }
 
 /// Extract modifier information from a modifier definition
-pub fn extract_modifier_info(modifier_def: &FunctionDefinition, file: &SolidityFile) -> ModifierInfo {
+pub fn extract_modifier_info(
+    modifier_def: &FunctionDefinition,
+    file: &SolidityFile,
+) -> ModifierInfo {
     let loc = loc_to_location(&modifier_def.loc, file);
 
     let name = modifier_def
@@ -1213,7 +1244,10 @@ pub fn extract_modifier_info(modifier_def: &FunctionDefinition, file: &SolidityF
 }
 
 /// Extract modifiers from a contract definition
-pub fn extract_contract_modifiers(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<ModifierInfo> {
+pub fn extract_contract_modifiers(
+    contract_def: &ContractDefinition,
+    file: &SolidityFile,
+) -> Vec<ModifierInfo> {
     contract_def
         .parts
         .iter()
@@ -1232,7 +1266,10 @@ pub fn extract_contract_modifiers(contract_def: &ContractDefinition, file: &Soli
 }
 
 /// Extract type definition information from a type definition
-pub fn extract_type_definition_info(type_def: &TypeDefinition, file: &SolidityFile) -> TypeDefinitionInfo {
+pub fn extract_type_definition_info(
+    type_def: &TypeDefinition,
+    file: &SolidityFile,
+) -> TypeDefinitionInfo {
     let loc = loc_to_location(&type_def.loc, file);
     let name = type_def.name.name.clone();
     let underlying_type = extract_type_name(&type_def.ty);
@@ -1245,7 +1282,10 @@ pub fn extract_type_definition_info(type_def: &TypeDefinition, file: &SolidityFi
 }
 
 /// Extract type definitions from a contract definition
-pub fn extract_contract_type_definitions(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<TypeDefinitionInfo> {
+pub fn extract_contract_type_definitions(
+    contract_def: &ContractDefinition,
+    file: &SolidityFile,
+) -> Vec<TypeDefinitionInfo> {
     contract_def
         .parts
         .iter()
@@ -1289,7 +1329,10 @@ pub fn extract_using_directive_info(using: &Using, file: &SolidityFile) -> Using
 }
 
 /// Extract using directives from a contract definition
-pub fn extract_contract_using_directives(contract_def: &ContractDefinition, file: &SolidityFile) -> Vec<UsingDirectiveInfo> {
+pub fn extract_contract_using_directives(
+    contract_def: &ContractDefinition,
+    file: &SolidityFile,
+) -> Vec<UsingDirectiveInfo> {
     contract_def
         .parts
         .iter()
@@ -1514,17 +1557,19 @@ pub fn extract_contract_info(
 
 /// Check if a function has the virtual attribute
 pub fn is_function_virtual(func_def: &FunctionDefinition) -> bool {
-    func_def.attributes.iter().any(|attr| {
-        matches!(attr, FunctionAttribute::Virtual(_))
-    })
+    func_def
+        .attributes
+        .iter()
+        .any(|attr| matches!(attr, FunctionAttribute::Virtual(_)))
 }
 
 /// Check if a function is read-only (view or pure)
 pub fn is_function_readonly(func_def: &FunctionDefinition) -> bool {
     func_def.attributes.iter().any(|attr| {
-        matches!(attr, 
-            FunctionAttribute::Mutability(Mutability::View(_)) | 
-            FunctionAttribute::Mutability(Mutability::Pure(_))
+        matches!(
+            attr,
+            FunctionAttribute::Mutability(Mutability::View(_))
+                | FunctionAttribute::Mutability(Mutability::Pure(_))
         )
     })
 }
@@ -1569,23 +1614,25 @@ pub fn is_likely_erc20_token(expr: &Expression) -> bool {
         Expression::Variable(var) => {
             let name_lower = var.name.to_lowercase();
             // Common ERC20 token names and stablecoins
-            name_lower.contains("token") || 
-            name_lower.contains("erc20") || 
-            name_lower.contains("usdt") || 
-            name_lower.contains("usdc") ||
-            name_lower.contains("dai") ||
-            name_lower.contains("weth") ||
-            name_lower.contains("wbtc") ||
-            name_lower.contains("busd") ||
-            name_lower.contains("tusd") ||
-            name_lower.contains("coin")
+            name_lower.contains("token")
+                || name_lower.contains("erc20")
+                || name_lower.contains("usdt")
+                || name_lower.contains("usdc")
+                || name_lower.contains("dai")
+                || name_lower.contains("weth")
+                || name_lower.contains("wbtc")
+                || name_lower.contains("busd")
+                || name_lower.contains("tusd")
+                || name_lower.contains("coin")
         }
         Expression::FunctionCall(_, func, _) => {
             // Check for ERC20/IERC20 interface casts
             if let Expression::Variable(var) = func.as_ref() {
                 let name = &var.name;
-                name == "ERC20" || name == "IERC20" || 
-                name.contains("ERC20") || name.contains("IERC20")
+                name == "ERC20"
+                    || name == "IERC20"
+                    || name.contains("ERC20")
+                    || name.contains("IERC20")
             } else {
                 false
             }
@@ -1593,9 +1640,9 @@ pub fn is_likely_erc20_token(expr: &Expression) -> bool {
         Expression::MemberAccess(_, base, member) => {
             let member_lower = member.name.to_lowercase();
             // Check if member suggests token or recurse on base
-            (member_lower.contains("token") && !member_lower.contains("tokenid")) || 
-            member_lower.contains("coin") ||
-            is_likely_erc20_token(base)
+            (member_lower.contains("token") && !member_lower.contains("tokenid"))
+                || member_lower.contains("coin")
+                || is_likely_erc20_token(base)
         }
         Expression::ArraySubscript(_, base, _) => is_likely_erc20_token(base),
         _ => false,
@@ -1608,20 +1655,24 @@ pub fn is_likely_nft(expr: &Expression) -> bool {
         Expression::Variable(var) => {
             let name_lower = var.name.to_lowercase();
             // Common NFT-related names
-            name_lower.contains("nft") ||
-            name_lower.contains("erc721") ||
-            name_lower.contains("erc1155") ||
-            name_lower.contains("collectible") ||
-            name_lower.contains("nonfungible")
+            name_lower.contains("nft")
+                || name_lower.contains("erc721")
+                || name_lower.contains("erc1155")
+                || name_lower.contains("collectible")
+                || name_lower.contains("nonfungible")
         }
         Expression::FunctionCall(_, func, _) => {
             // Check for ERC721/ERC1155 interface casts
             if let Expression::Variable(var) = func.as_ref() {
                 let name = &var.name;
-                name == "ERC721" || name == "IERC721" || 
-                name == "ERC1155" || name == "IERC1155" ||
-                name.contains("ERC721") || name.contains("IERC721") ||
-                name.contains("ERC1155") || name.contains("IERC1155")
+                name == "ERC721"
+                    || name == "IERC721"
+                    || name == "ERC1155"
+                    || name == "IERC1155"
+                    || name.contains("ERC721")
+                    || name.contains("IERC721")
+                    || name.contains("ERC1155")
+                    || name.contains("IERC1155")
             } else {
                 false
             }
@@ -1629,9 +1680,9 @@ pub fn is_likely_nft(expr: &Expression) -> bool {
         Expression::MemberAccess(_, base, member) => {
             let member_lower = member.name.to_lowercase();
             // Check if member suggests NFT
-            member_lower.contains("nft") || 
-            member_lower.contains("collectible") ||
-            is_likely_nft(base)
+            member_lower.contains("nft")
+                || member_lower.contains("collectible")
+                || is_likely_nft(base)
         }
         Expression::ArraySubscript(_, base, _) => is_likely_nft(base),
         _ => false,
@@ -1643,7 +1694,7 @@ pub fn is_complex_type_structure(expr: &Expression) -> bool {
     match expr {
         // Array access like arr[i] or mapping[key] - definitely complex
         Expression::ArraySubscript(_, _, _) => true,
-        
+
         // Multiple member accesses usually indicate struct field access
         Expression::MemberAccess(_, base, _) => {
             // Check for chained member access (e.g., order.user.name)
