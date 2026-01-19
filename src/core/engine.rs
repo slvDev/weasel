@@ -389,6 +389,9 @@ impl AnalysisEngine {
             crate::detectors::nc::BoolInitFalseDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::ComplexRequireDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::AbiEncodeCallDetector::default(),
         ));
         self.register_detector(Arc::new(
