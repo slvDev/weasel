@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2026-01-19
+
+### Added
+
+#### New Detectors
+
+**Low**
+- `constant-decimals` - prefer constants for decimals
+
+**NC (Non-Critical)**
+- `abstract-in-separate-file` - abstract contracts should be in separate files
+- `array-ranged-getter` - use ranged getter for array access
+- `bool-init-false` - unnecessary boolean initialization to false
+- `nc-combine-mappings` - mappings with same key can be combined into struct
+- `complex-require` - complex require statements should be simplified
+- `constant-expression` - expressions that could be constants
+- `constructor-emit-event` - constructors should emit events
+- `delete-instead-of-false` - use delete instead of setting to false
+- `delete-instead-of-zero` - use delete instead of setting to zero
+- `duplicate-string-literal` - duplicate string literals in code
+- `empty-blocks` - empty code blocks
+- `error-definition-no-args` - error definitions without arguments
+- `external-call-in-modifier` - external calls in modifiers
+- `floating-pragma` - floating pragma version
+- `initialism-capitalization` - incorrect capitalization of initialisms (URL, ID)
+- `initializer-emit-event` - initializers should emit events
+- `interfaces-contracts-same-file` - interfaces and contracts in same file
+- `library-in-separate-file` - libraries should be in separate files
+- `many-function-params` - functions with too many parameters
+- `many-return-values` - functions with too many return values
+- `mixed-int-uint-style` - mixed int/uint and int256/uint256 style
+- `multiple-abstract-contracts` - multiple abstract contracts in one file
+- `multiple-contracts` - multiple contracts in one file
+- `multiple-interfaces` - multiple interfaces in one file
+- `multiple-libraries` - multiple libraries in one file
+- `named-function-args` - use named function arguments for clarity
+- `named-returns` - use named returns for clarity
+- `prefer-custom-errors` - use custom errors instead of require/assert
+- `unnamed-revert` - revert without custom error identifier
+- `unused-private-function` - unused private functions
+- `zero-argument` - literal zero as function argument
+
 ## [0.4.5] - 2026-01-15
 
 ### Changed
@@ -141,7 +183,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI with configuration file support
 - Basic detectors for common vulnerabilities
 
-[Unreleased]: https://github.com/slvDev/weasel/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/slvDev/weasel/compare/v0.4.6...HEAD
+[0.4.6]: https://github.com/slvDev/weasel/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/slvDev/weasel/compare/v0.4.0...v0.4.5
 [0.4.0]: https://github.com/slvDev/weasel/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/slvDev/weasel/compare/v0.3.0...v0.3.1
