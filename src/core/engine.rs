@@ -488,6 +488,9 @@ impl AnalysisEngine {
             crate::detectors::nc::UnusedOverrideParamsDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::UnusedPrivateFunctionDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::WhileTrueLoopDetector::default(),
         ));
         self.register_detector(Arc::new(
