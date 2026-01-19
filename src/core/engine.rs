@@ -440,6 +440,9 @@ impl AnalysisEngine {
             crate::detectors::nc::MissingSpdxDetector::default(),
         ));
         self.register_detector(Arc::new(
+            crate::detectors::nc::MixedIntUintStyleDetector::default(),
+        ));
+        self.register_detector(Arc::new(
             crate::detectors::nc::MultipleAbstractContractsDetector::default(),
         ));
         self.register_detector(Arc::new(
