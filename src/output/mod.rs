@@ -8,11 +8,14 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 
+mod sarif;
+
 #[derive(Debug, Clone, Deserialize, Default)]
 pub enum ReportFormat {
     Json,
     #[default]
     Markdown,
+    Sarif,
 }
 
 impl FromStr for ReportFormat {
@@ -22,6 +25,7 @@ impl FromStr for ReportFormat {
         match s.to_lowercase().as_str() {
             "json" => Ok(ReportFormat::Json),
             "md" | "markdown" => Ok(ReportFormat::Markdown),
+            "sarif" => Ok(ReportFormat::Sarif),
             _ => Err(format!("Invalid report format: {}", s)),
         }
     }
@@ -32,6 +36,7 @@ impl fmt::Display for ReportFormat {
         match self {
             ReportFormat::Json => write!(f, "Json"),
             ReportFormat::Markdown => write!(f, "Markdown"),
+            ReportFormat::Sarif => write!(f, "Sarif"),
         }
     }
 }
@@ -64,6 +69,20 @@ pub fn generate_report(
                 println!("Report saved: {}", path_with_extension.display());
             } else {
                 println!("{}", markdown);
+            }
+        }
+        ReportFormat::Sarif => {
+            let sarif_report = sarif::generate_sarif_report(report);
+
+            if let Some(path) = output {
+                let path_with_extension = path.with_extension("sarif");
+                let file = File::create(&path_with_extension)?;
+                serde_json::to_writer_pretty(file, &sarif_report)?;
+                println!("Report saved: {}", path_with_extension.display());
+            } else {
+                let stdout = io::stdout();
+                let handle = stdout.lock();
+                serde_json::to_writer_pretty(handle, &sarif_report)?;
             }
         }
     }

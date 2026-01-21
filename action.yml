@@ -7,6 +7,10 @@ branding:
   color: 'orange'
 
 inputs:
+  version:
+    description: 'Weasel version to use (latest, nightly, or specific version like 0.4.6)'
+    required: false
+    default: 'latest'
   path:
     description: 'Path to analyze (file or directory)'
     required: false
@@ -27,6 +31,14 @@ inputs:
     description: 'Path to weasel.toml config file'
     required: false
     default: ''
+  sarif:
+    description: 'Generate SARIF output for GitHub Code Scanning'
+    required: false
+    default: 'false'
+  upload-sarif:
+    description: 'Upload SARIF results to GitHub Code Scanning'
+    required: false
+    default: 'false'
 
 outputs:
   findings:
@@ -35,15 +47,33 @@ outputs:
   report:
     description: 'Path to the report file'
     value: ${{ steps.weasel.outputs.report }}
+  sarif-report:
+    description: 'Path to the SARIF report file (if sarif=true)'
+    value: ${{ steps.weasel.outputs.sarif_report }}
 
 runs:
   using: 'composite'
   steps:
+    - name: Cache Weasel
+      if: inputs.version != 'nightly'
+      uses: actions/cache@v4
+      with:
+        path: ~/.weasel
+        key: weasel-${{ runner.os }}-${{ inputs.version }}
+
     - name: Install Weasel
       shell: bash
       run: |
         curl -sSL https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
         echo "$HOME/.weasel/bin" >> $GITHUB_PATH
+
+        # Install specific version if requested
+        VERSION="${{ inputs.version }}"
+        if [ "$VERSION" = "nightly" ]; then
+          "$HOME/.weasel/bin/weaselup" --nightly
+        elif [ "$VERSION" != "latest" ]; then
+          "$HOME/.weasel/bin/weaselup" -v "$VERSION"
+        fi
 
     - name: Run Weasel
       id: weasel
@@ -69,10 +99,43 @@ runs:
           FINDINGS=$(jq '.findings | length' weasel-report.json)
           echo "findings=$FINDINGS" >> $GITHUB_OUTPUT
           echo "report=weasel-report.json" >> $GITHUB_OUTPUT
-          echo "### Weasel found $FINDINGS issues" >> $GITHUB_STEP_SUMMARY
+
+          # Enhanced step summary with severity breakdown
+          echo "### Weasel Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| High | $(jq '[.findings[] | select(.severity=="High")] | length' weasel-report.json) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Medium | $(jq '[.findings[] | select(.severity=="Medium")] | length' weasel-report.json) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Low | $(jq '[.findings[] | select(.severity=="Low")] | length' weasel-report.json) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Gas | $(jq '[.findings[] | select(.severity=="Gas")] | length' weasel-report.json) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Total: $FINDINGS**" >> $GITHUB_STEP_SUMMARY
         else
           echo "findings=0" >> $GITHUB_OUTPUT
           echo "report=" >> $GITHUB_OUTPUT
+        fi
+
+        # Generate SARIF if requested
+        if [ "${{ inputs.sarif }}" = "true" ]; then
+          SARIF_ARGS="run --scope ${{ inputs.path }} --min-severity ${{ inputs.min-severity }} --format sarif --output weasel-report"
+
+          if [ -n "${{ inputs.exclude }}" ]; then
+            IFS=',' read -ra EXCLUDES <<< "${{ inputs.exclude }}"
+            for exc in "${EXCLUDES[@]}"; do
+              SARIF_ARGS="$SARIF_ARGS --exclude $exc"
+            done
+          fi
+
+          if [ -n "${{ inputs.config }}" ]; then
+            SARIF_ARGS="$SARIF_ARGS --config ${{ inputs.config }}"
+          fi
+
+          weasel $SARIF_ARGS || true
+
+          if [ -f weasel-report.sarif ]; then
+            echo "sarif_report=weasel-report.sarif" >> $GITHUB_OUTPUT
+          fi
         fi
 
     - name: Check fail condition
@@ -101,3 +164,10 @@ runs:
           echo "::error::Weasel found $COUNT findings at $FAIL_ON severity or higher"
           exit 1
         fi
+
+    - name: Upload SARIF to GitHub
+      if: inputs.upload-sarif == 'true' && steps.weasel.outputs.sarif_report != ''
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ steps.weasel.outputs.sarif_report }}
+        category: weasel

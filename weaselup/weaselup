@@ -9,6 +9,7 @@ WEASEL_BIN_DIR="$WEASEL_DIR/bin"
 
 REPO="slvDev/weasel"
 VERSION=""
+USE_NIGHTLY=false
 
 main() {
     parse_args "$@"
@@ -26,12 +27,14 @@ main() {
     local version
     if [[ -n "$VERSION" ]]; then
         version="$VERSION"
+    elif [[ "$USE_NIGHTLY" == true ]]; then
+        version=$(get_nightly_version)
     else
         version=$(get_latest_version)
     fi
 
-    # Check if already installed with same version
-    if [[ -x "$WEASEL_BIN_DIR/weasel" ]]; then
+    # Check if already installed with same version (skip for nightly - always reinstall)
+    if [[ -x "$WEASEL_BIN_DIR/weasel" ]] && [[ "$version" != nightly-* ]]; then
         local current_version
         current_version=$("$WEASEL_BIN_DIR/weasel" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
         if [[ "$current_version" == "$version" ]]; then
@@ -57,6 +60,10 @@ parse_args() {
                 VERSION="$2"
                 shift 2
                 ;;
+            --nightly)
+                USE_NIGHTLY=true
+                shift
+                ;;
             -h|--help)
                 show_help
                 exit 0
@@ -78,12 +85,14 @@ USAGE:
     weaselup [OPTIONS]
 
 OPTIONS:
-    -v, --version <VERSION>    Install specific version (e.g., 0.2.0)
+    -v, --version <VERSION>    Install specific version (e.g., 0.4.6)
+    --nightly                  Install latest nightly build
     -h, --help                 Show this help message
 
 EXAMPLES:
-    weaselup                   Install latest version
-    weaselup -v 0.2.0          Install version 0.2.0
+    weaselup                   Install latest stable version
+    weaselup --nightly         Install latest nightly build
+    weaselup -v 0.4.6          Install version 0.4.6
 EOF
 }
 
@@ -165,11 +174,41 @@ get_latest_version() {
     echo "$version"
 }
 
+get_nightly_version() {
+    # Get latest nightly release (tag format: nightly-YYYYMMDD-SHORTSHA)
+    local url="https://api.github.com/repos/$REPO/releases"
+    local tag
+
+    if command -v curl &> /dev/null; then
+        tag=$(curl -fsSL "$url" | grep '"tag_name"' | grep 'nightly-' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+    elif command -v wget &> /dev/null; then
+        tag=$(wget -qO- "$url" | grep '"tag_name"' | grep 'nightly-' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+    else
+        echo "Error: curl or wget is required"
+        exit 1
+    fi
+
+    if [[ -z "$tag" ]]; then
+        echo "Error: No nightly version found. Run 'weaselup' for latest stable."
+        exit 1
+    fi
+
+    echo "$tag"
+}
+
 download_and_install() {
     local version="$1"
     local target="$2"
     local filename="weasel-${target}.tar.gz"
-    local url="https://github.com/$REPO/releases/download/v${version}/${filename}"
+    local url
+
+    # Nightly tags don't have 'v' prefix
+    if [[ "$version" == nightly-* ]]; then
+        url="https://github.com/$REPO/releases/download/${version}/${filename}"
+    else
+        url="https://github.com/$REPO/releases/download/v${version}/${filename}"
+    fi
+
     local tmp_dir
 
     tmp_dir=$(mktemp -d)

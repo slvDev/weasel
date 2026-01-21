@@ -73,7 +73,7 @@ Weasel skills activate. Your AI runs analysis, writes PoCs, formats reports, and
 curl -L https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
 ```
 
-Update anytime with `weaselup`.
+Update anytime with `weaselup`. Use `weaselup --nightly` for latest dev build.
 
 <details>
 <summary>From Source</summary>
@@ -186,7 +186,8 @@ weasel run -s ./contracts               # specify path
 weasel run -e ./test -e ./mocks         # exclude paths
 weasel run -m High                      # only critical
 weasel run -o report.md                 # save report
-weasel run -o report.json -f json       # JSON format
+weasel run -o report -f json            # JSON format
+weasel run -o report -f sarif           # SARIF format (for GitHub Code Scanning)
 ```
 
 ### Detectors
@@ -250,15 +251,31 @@ jobs:
           exclude: test,mocks
 ```
 
+### GitHub Code Scanning
+
+Enable inline findings in PR diffs and the Security tab:
+
+```yaml
+- uses: slvDev/weasel@v1
+  with:
+    sarif: true
+    upload-sarif: true
+```
+
+Requires `security-events: write` permission.
+
 ### Inputs
 
 | Input | Description | Default |
 |-------|-------------|---------|
+| `version` | Weasel version (`latest`, `nightly`, or specific like `0.4.6`) | `latest` |
 | `path` | Path to analyze | `.` |
 | `min-severity` | Minimum severity to report | `Low` |
 | `fail-on` | Fail CI at this severity (`High`, `Medium`, `Low`, `none`) | `none` |
 | `exclude` | Paths to exclude (comma-separated) | |
 | `config` | Path to `weasel.toml` | |
+| `sarif` | Generate SARIF output for Code Scanning | `false` |
+| `upload-sarif` | Upload SARIF to GitHub Code Scanning | `false` |
 
 ### Outputs
 
@@ -266,6 +283,7 @@ jobs:
 |--------|-------------|
 | `findings` | Number of issues found |
 | `report` | Path to JSON report |
+| `sarif-report` | Path to SARIF report (if `sarif: true`) |
 
 ---
 

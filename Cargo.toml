@@ -15,4 +15,6 @@ solang-parser = "0.3.4"
 semver = "1.0"
 rayon = "1.7"
 dirs = "5.0"
+serde-sarif = "0.8"
+fnv = "1.0"
 
