@@ -42,6 +42,9 @@ enum Commands {
 
         #[arg(short, long)]
         remappings: Option<Vec<String>>,
+
+        #[arg(short = 'x', long, value_name = "DETECTOR_ID")]
+        exclude_detectors: Option<Vec<String>>,
     },
     Detectors {
         #[arg(short, long)]
@@ -71,6 +74,7 @@ fn main() {
             output,
             config,
             remappings,
+            exclude_detectors,
         } => {
             cli::run::handle_run_command(
                 scope,
@@ -80,6 +84,7 @@ fn main() {
                 output,
                 config,
                 remappings,
+                exclude_detectors,
             );
         }
         Commands::Detectors { severity, details } => {

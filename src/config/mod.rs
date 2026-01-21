@@ -1,3 +1,7 @@
+mod protocol;
+
+pub use protocol::ProtocolConfig;
+
 use crate::models::Severity;
 use crate::output::ReportFormat;
 use serde::Deserialize;
@@ -34,6 +38,19 @@ pub const DEFAULT_CONFIG_CONTENT: &str = r#"# weasel.toml
 #     "@openzeppelin/=lib/openzeppelin-contracts/contracts/",
 #     "@solmate/=lib/solmate/src/"
 # ]
+
+# Explicitly exclude specific detectors by ID.
+# Run `weasel detectors` to see all available detector IDs.
+# exclude_detectors = ["floating-pragma", "line-length"]
+
+# Protocol Features
+# By default, all protocol features are enabled.
+[protocol]
+# uses_fot_tokens = false      # Fee-on-transfer tokens
+# uses_weird_erc20 = false     # Weird ERC20 tokens (non-standard behavior)
+# uses_native_token = false    # Native ETH handling
+# uses_l2 = false              # L2 chains (Arbitrum, Optimism, etc.)
+# uses_nft = false             # NFT collections (ERC721, ERC1155)
 "#;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -48,6 +65,10 @@ pub struct Config {
     pub format: ReportFormat,
     #[serde(default)]
     pub remappings: Vec<String>,
+    #[serde(default)]
+    pub exclude_detectors: Vec<String>,
+    #[serde(default)]
+    pub protocol: ProtocolConfig,
 }
 
 fn default_exclude() -> Vec<PathBuf> {
@@ -62,6 +83,8 @@ impl Default for Config {
             min_severity: Severity::default(),
             format: ReportFormat::default(),
             remappings: Vec::new(),
+            exclude_detectors: Vec::new(),
+            protocol: ProtocolConfig::default(),
         }
     }
 }
@@ -73,6 +96,7 @@ pub fn load_config(
     format: Option<String>,
     remappings: Option<Vec<String>>,
     config_path: Option<PathBuf>,
+    exclude_detectors: Option<Vec<String>>,
 ) -> Config {
     let default_path = PathBuf::from("weasel.toml");
     let config_path = config_path.unwrap_or(default_path);
@@ -104,6 +128,15 @@ pub fn load_config(
         }
     };
 
+    // Merge exclude_detectors: CLI args extend config file list
+    let final_exclude_detectors = {
+        let mut from_config = config.exclude_detectors.clone();
+        if let Some(cli_exclusions) = exclude_detectors {
+            from_config.extend(cli_exclusions);
+        }
+        from_config
+    };
+
     Config {
         scope: scope.unwrap_or(config.scope),
         exclude: exclude.unwrap_or(config.exclude),
@@ -120,6 +153,8 @@ pub fn load_config(
             })
         }),
         remappings: remappings.unwrap_or(config.remappings),
+        exclude_detectors: final_exclude_detectors,
+        protocol: config.protocol,
     }
 }
 

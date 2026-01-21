@@ -11,6 +11,7 @@ pub fn handle_run_command(
     output: Option<PathBuf>,
     config_path: Option<PathBuf>,
     remappings: Option<Vec<String>>,
+    exclude_detectors: Option<Vec<String>>,
 ) {
     let config = load_config(
         scope,
@@ -19,6 +20,7 @@ pub fn handle_run_command(
         format,
         remappings,
         config_path,
+        exclude_detectors,
     );
 
     let mut engine = AnalysisEngine::new(&config);

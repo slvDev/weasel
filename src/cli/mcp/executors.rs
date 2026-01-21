@@ -45,7 +45,7 @@ pub fn execute_analyze(arguments: &Value) -> Result<Value, JsonRpcError> {
         });
 
     let scope = path.map(|p| vec![p]);
-    let config = load_config(scope, exclude, severity, None, None, None);
+    let config = load_config(scope, exclude, severity, None, None, None, None);
 
     let mut engine = AnalysisEngine::new(&config);
     engine.register_built_in_detectors();
@@ -158,7 +158,7 @@ pub fn execute_finding_details(arguments: &Value) -> Result<Value, JsonRpcError>
     }
 
     let scope = path.map(|p| vec![p]);
-    let config = load_config(scope, None, None, None, None, None);
+    let config = load_config(scope, None, None, None, None, None, None);
 
     let mut engine = AnalysisEngine::new(&config);
     engine.register_built_in_detectors();
@@ -226,7 +226,7 @@ pub fn execute_detectors(arguments: &Value) -> Result<Value, JsonRpcError> {
         .map(|s| s.to_string());
 
     // Create a temporary engine to get detector list
-    let config = load_config(None, None, severity_filter, None, None, None);
+    let config = load_config(None, None, severity_filter, None, None, None, None);
     let mut engine = AnalysisEngine::new(&config);
     engine.register_built_in_detectors();
 

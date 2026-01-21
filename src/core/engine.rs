@@ -6,7 +6,7 @@ use crate::core::registry::DetectorRegistry;
 use crate::core::visitor::ASTVisitor;
 use crate::detectors::Detector;
 use crate::models::{Finding, Report};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -16,6 +16,7 @@ pub struct AnalysisEngine {
     visitor: ASTVisitor,
     processor: Processor,
     config: Config,
+    excluded_detectors: HashSet<String>,
 }
 
 impl AnalysisEngine {
@@ -26,11 +27,21 @@ impl AnalysisEngine {
             visitor: ASTVisitor::new(),
             processor: Processor::new(),
             config: config.clone(),
+            excluded_detectors: Self::compute_excluded_detectors(config),
         }
     }
 
+    fn compute_excluded_detectors(config: &Config) -> HashSet<String> {
+        let mut excluded = config.protocol.get_excluded_detectors();
+        excluded.extend(config.exclude_detectors.iter().cloned());
+        excluded
+    }
+
     pub fn register_detector(&mut self, detector: Arc<dyn Detector>) {
-        if detector.severity().as_value() >= self.config.min_severity.as_value() {
+        let passes_severity = detector.severity().as_value() >= self.config.min_severity.as_value();
+        let not_excluded = !self.excluded_detectors.contains(detector.id());
+
+        if passes_severity && not_excluded {
             self.registry.register(detector);
         }
     }
