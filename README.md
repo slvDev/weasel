@@ -228,7 +228,7 @@ remappings = ["@openzeppelin/=lib/openzeppelin-contracts/"]
 Run Weasel in your CI/CD pipeline:
 
 ```yaml
-- uses: slvDev/weasel@v1
+- uses: slvDev/weasel@main
 ```
 
 ### Example Workflow
@@ -244,11 +244,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: slvDev/weasel@v1
+      - uses: slvDev/weasel@main
         with:
           path: ./src
           fail-on: High
           exclude: test,mocks
+```
+
+### Nightly Builds
+
+Use the latest development version:
+
+```yaml
+- uses: slvDev/weasel@main
+  with:
+    version: nightly
 ```
 
 ### GitHub Code Scanning
@@ -256,13 +266,26 @@ jobs:
 Enable inline findings in PR diffs and the Security tab:
 
 ```yaml
-- uses: slvDev/weasel@v1
+- uses: slvDev/weasel@main
   with:
     sarif: true
     upload-sarif: true
 ```
 
 Requires `security-events: write` permission.
+
+### Verify Downloads
+
+Release binaries include SHA256 checksums and build attestation:
+
+```bash
+# Verify checksum
+sha256sum -c checksums.txt
+
+# Verify attestation (requires gh CLI)
+gh attestation verify weasel-<target>.tar.gz --owner slvDev
+# Example: gh attestation verify weasel-aarch64-apple-darwin.tar.gz --owner slvDev
+```
 
 ### Inputs
 

@@ -54,18 +54,44 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Resolve version
+      id: resolve
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        if [ "$VERSION" = "latest" ]; then
+          # Get actual latest version for cache key (with fallback)
+          RESOLVED=$(curl -fsSL -H "Authorization: Bearer ${{ github.token }}" \
+            https://api.github.com/repos/slvDev/weasel/releases/latest 2>/dev/null | \
+            grep '"tag_name"' | sed -E 's/.*"v?([^"]+)".*/\1/' || echo "")
+          if [ -z "$RESOLVED" ]; then
+            echo "cache=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$RESOLVED" >> "$GITHUB_OUTPUT"
+            echo "cache=true" >> "$GITHUB_OUTPUT"
+          fi
+        elif [ "$VERSION" = "nightly" ]; then
+          echo "version=nightly" >> "$GITHUB_OUTPUT"
+          echo "cache=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "cache=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Cache Weasel
-      if: inputs.version != 'nightly'
-      uses: actions/cache@v4
+      id: cache
+      if: steps.resolve.outputs.cache == 'true'
+      uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
       with:
         path: ~/.weasel
-        key: weasel-${{ runner.os }}-${{ inputs.version }}
+        key: weasel-${{ runner.os }}-${{ runner.arch }}-${{ steps.resolve.outputs.version }}
 
     - name: Install Weasel
+      if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         curl -sSL https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
-        echo "$HOME/.weasel/bin" >> $GITHUB_PATH
+        echo "$HOME/.weasel/bin" >> "$GITHUB_PATH"
 
         # Install specific version if requested
         VERSION="${{ inputs.version }}"
@@ -75,66 +101,73 @@ runs:
           "$HOME/.weasel/bin/weaselup" -v "$VERSION"
         fi
 
+    - name: Add to PATH (cache hit)
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: echo "$HOME/.weasel/bin" >> "$GITHUB_PATH"
+
     - name: Run Weasel
       id: weasel
       shell: bash
       run: |
-        ARGS="run --scope ${{ inputs.path }} --min-severity ${{ inputs.min-severity }} --format json --output weasel-report"
+        # Build common args
+        COMMON_ARGS="--scope ${{ inputs.path }} --min-severity ${{ inputs.min-severity }}"
 
-        if [ -n "${{ inputs.exclude }}" ]; then
-          IFS=',' read -ra EXCLUDES <<< "${{ inputs.exclude }}"
+        # Add excludes
+        EXCLUDE_INPUT="${{ inputs.exclude }}"
+        if [ -n "$EXCLUDE_INPUT" ]; then
+          IFS=',' read -ra EXCLUDES <<< "$EXCLUDE_INPUT"
           for exc in "${EXCLUDES[@]}"; do
-            ARGS="$ARGS --exclude $exc"
+            COMMON_ARGS="$COMMON_ARGS --exclude $exc"
           done
         fi
 
-        if [ -n "${{ inputs.config }}" ]; then
-          ARGS="$ARGS --config ${{ inputs.config }}"
+        # Add config
+        CONFIG_INPUT="${{ inputs.config }}"
+        if [ -n "$CONFIG_INPUT" ]; then
+          COMMON_ARGS="$COMMON_ARGS --config $CONFIG_INPUT"
         fi
 
-        weasel $ARGS || true
+        # Run JSON report
+        weasel run $COMMON_ARGS --format json --output weasel-report
+        JSON_EXIT=$?
 
         # Count findings
         if [ -f weasel-report.json ]; then
           FINDINGS=$(jq '.findings | length' weasel-report.json)
-          echo "findings=$FINDINGS" >> $GITHUB_OUTPUT
-          echo "report=weasel-report.json" >> $GITHUB_OUTPUT
+          echo "findings=$FINDINGS" >> "$GITHUB_OUTPUT"
+          echo "report=weasel-report.json" >> "$GITHUB_OUTPUT"
 
           # Enhanced step summary with severity breakdown
-          echo "### Weasel Analysis Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| High | $(jq '[.findings[] | select(.severity=="High")] | length' weasel-report.json) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Medium | $(jq '[.findings[] | select(.severity=="Medium")] | length' weasel-report.json) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Low | $(jq '[.findings[] | select(.severity=="Low")] | length' weasel-report.json) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Gas | $(jq '[.findings[] | select(.severity=="Gas")] | length' weasel-report.json) |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Total: $FINDINGS**" >> $GITHUB_STEP_SUMMARY
+          echo "### Weasel Analysis Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Severity | Count |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| High | $(jq '[.findings[] | select(.severity=="High")] | length' weasel-report.json) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Medium | $(jq '[.findings[] | select(.severity=="Medium")] | length' weasel-report.json) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Low | $(jq '[.findings[] | select(.severity=="Low")] | length' weasel-report.json) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Gas | $(jq '[.findings[] | select(.severity=="Gas")] | length' weasel-report.json) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| NC | $(jq '[.findings[] | select(.severity=="NC")] | length' weasel-report.json) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Total: $FINDINGS**" >> "$GITHUB_STEP_SUMMARY"
         else
-          echo "findings=0" >> $GITHUB_OUTPUT
-          echo "report=" >> $GITHUB_OUTPUT
+          echo "findings=0" >> "$GITHUB_OUTPUT"
+          echo "report=" >> "$GITHUB_OUTPUT"
+          if [ $JSON_EXIT -ne 0 ]; then
+            echo "::error::Weasel failed to run"
+            exit $JSON_EXIT
+          fi
         fi
 
         # Generate SARIF if requested
         if [ "${{ inputs.sarif }}" = "true" ]; then
-          SARIF_ARGS="run --scope ${{ inputs.path }} --min-severity ${{ inputs.min-severity }} --format sarif --output weasel-report"
-
-          if [ -n "${{ inputs.exclude }}" ]; then
-            IFS=',' read -ra EXCLUDES <<< "${{ inputs.exclude }}"
-            for exc in "${EXCLUDES[@]}"; do
-              SARIF_ARGS="$SARIF_ARGS --exclude $exc"
-            done
-          fi
-
-          if [ -n "${{ inputs.config }}" ]; then
-            SARIF_ARGS="$SARIF_ARGS --config ${{ inputs.config }}"
-          fi
-
-          weasel $SARIF_ARGS || true
+          weasel run $COMMON_ARGS --format sarif --output weasel-report
+          SARIF_EXIT=$?
 
           if [ -f weasel-report.sarif ]; then
-            echo "sarif_report=weasel-report.sarif" >> $GITHUB_OUTPUT
+            echo "sarif_report=weasel-report.sarif" >> "$GITHUB_OUTPUT"
+          elif [ $SARIF_EXIT -ne 0 ]; then
+            echo "::warning::SARIF generation failed"
           fi
         fi
 
@@ -147,6 +180,7 @@ runs:
         fi
 
         FAIL_ON="${{ inputs.fail-on }}"
+        COUNT=0
 
         case $FAIL_ON in
           High)
@@ -158,6 +192,10 @@ runs:
           Low)
             COUNT=$(jq '[.findings[] | select(.severity == "High" or .severity == "Medium" or .severity == "Low")] | length' weasel-report.json)
             ;;
+          *)
+            echo "::warning::Unknown fail-on value: $FAIL_ON"
+            COUNT=0
+            ;;
         esac
 
         if [ "$COUNT" -gt 0 ]; then
@@ -166,8 +204,8 @@ runs:
         fi
 
     - name: Upload SARIF to GitHub
-      if: inputs.upload-sarif == 'true' && steps.weasel.outputs.sarif_report != ''
-      uses: github/codeql-action/upload-sarif@v4
+      if: inputs.upload-sarif == 'true' && steps.weasel.outputs.sarif_report
+      uses: github/codeql-action/upload-sarif@4bdb89f48054571735e3792627da6195c57459e2 # v3.31.10
       with:
         sarif_file: ${{ steps.weasel.outputs.sarif_report }}
         category: weasel
