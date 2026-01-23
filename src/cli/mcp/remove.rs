@@ -11,7 +11,7 @@ pub fn handle_remove(target: Option<String>) {
             Some(tool) => vec![tool],
             None => {
                 eprintln!("Unknown target: {}", target_id);
-                eprintln!("Available targets: claude, cursor, windsurf, codex");
+                eprintln!("Available targets: claude, cursor, windsurf, codex, gemini");
                 std::process::exit(1);
             }
         },

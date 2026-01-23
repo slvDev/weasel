@@ -7,6 +7,7 @@ pub enum AiTool {
     Cursor,
     Windsurf,
     Codex,
+    Gemini,
 }
 
 impl AiTool {
@@ -16,6 +17,7 @@ impl AiTool {
             AiTool::Cursor => "Cursor",
             AiTool::Windsurf => "Windsurf",
             AiTool::Codex => "OpenAI Codex",
+            AiTool::Gemini => "Gemini CLI",
         }
     }
 
@@ -29,6 +31,7 @@ impl AiTool {
                 .join("windsurf")
                 .join("mcp_config.json"),
             AiTool::Codex => home.join(".codex").join("config.toml"),
+            AiTool::Gemini => home.join(".gemini").join("settings.json"),
         })
     }
 
@@ -52,11 +55,12 @@ impl AiTool {
             AiTool::Cursor => command_exists("cursor"),
             AiTool::Windsurf => command_exists("windsurf"),
             AiTool::Codex => command_exists("codex"),
+            AiTool::Gemini => command_exists("gemini"),
         }
     }
 
     pub fn all() -> &'static [AiTool] {
-        &[AiTool::ClaudeCode, AiTool::Cursor, AiTool::Windsurf, AiTool::Codex]
+        &[AiTool::ClaudeCode, AiTool::Cursor, AiTool::Windsurf, AiTool::Codex, AiTool::Gemini]
     }
 
     pub fn from_id(id: &str) -> Option<AiTool> {
@@ -65,6 +69,7 @@ impl AiTool {
             "cursor" => Some(AiTool::Cursor),
             "windsurf" => Some(AiTool::Windsurf),
             "codex" | "openai" | "openai-codex" => Some(AiTool::Codex),
+            "gemini" | "gemini-cli" => Some(AiTool::Gemini),
             _ => None,
         }
     }

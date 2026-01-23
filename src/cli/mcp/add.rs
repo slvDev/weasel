@@ -20,7 +20,7 @@ pub fn handle_add(target: Option<String>) {
                 }
                 None => {
                     eprintln!("Unknown target: {}", target_id);
-                    eprintln!("Available targets: claude, cursor, windsurf, codex");
+                    eprintln!("Available targets: claude, cursor, windsurf, codex, gemini");
                     std::process::exit(1);
                 }
             }
@@ -43,7 +43,7 @@ pub fn handle_add(target: Option<String>) {
 
             if installed.is_empty() {
                 eprintln!("\nNo supported AI tools detected.");
-                eprintln!("Supported tools: Claude Code, Cursor, Windsurf, OpenAI Codex");
+                eprintln!("Supported tools: Claude Code, Cursor, Windsurf, OpenAI Codex, Gemini CLI");
                 std::process::exit(1);
             }
 

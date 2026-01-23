@@ -8,15 +8,15 @@ use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum McpCommands {
-    /// Add Weasel MCP server to AI tools (Claude Code, Cursor, Windsurf, OpenAI Codex)
+    /// Add Weasel MCP server to AI tools (Claude Code, Cursor, Windsurf, OpenAI Codex, Gemini CLI)
     Add {
-        /// Target specific tool (claude, cursor, windsurf, codex)
+        /// Target specific tool (claude, cursor, windsurf, codex, gemini)
         #[arg(short, long)]
         target: Option<String>,
     },
     /// Remove Weasel MCP server from AI tools
     Remove {
-        /// Target specific tool (claude, cursor, windsurf, codex)
+        /// Target specific tool (claude, cursor, windsurf, codex, gemini)
         #[arg(short, long)]
         target: Option<String>,
     },
