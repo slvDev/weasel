@@ -1,14 +1,14 @@
 # Example: AI-powered PR diff security review with SARIF output
-# Copy to .github/workflows/ and add OPENAI_API_KEY secret
+# Copy to .github/workflows/ and add GEMINI_API_KEY secret
 #
 # This workflow:
 # 1. Extracts the Solidity diff from the PR
-# 2. Codex reviews changed lines for security issues
+# 2. Gemini reviews changed lines for security issues
 # 3. Outputs simple JSON -> converts to SARIF
 # 4. SARIF uploaded -> findings appear INLINE on PR code
 #
 # Architecture (reliable):
-#   Codex -> Simple JSON -> jq -> Valid SARIF
+#   Gemini -> Simple JSON (file) -> jq -> Valid SARIF
 #
 # Results show in:
 # - "Files changed" tab: Inline annotations on exact lines
@@ -16,9 +16,9 @@
 # - Job summary: Quick overview
 #
 # Requirements:
-# - OPENAI_API_KEY secret in your repository
+# - GEMINI_API_KEY secret in your repository
 
-name: AI Diff Review (Codex)
+name: AI Diff Review (Gemini)
 
 on:
   pull_request:
@@ -51,14 +51,15 @@ jobs:
         if: steps.diff.outputs.has_changes != 'true'
         run: echo "No Solidity changes, skipping"
 
+      # Model options:
+      #   gemini-3-flash-preview - Fast & cheap, recommended
+      #   gemini-3-pro-preview   - Best reasoning, higher cost
       - name: AI Security Review
         if: steps.diff.outputs.has_changes == 'true'
-        id: review
-        uses: openai/codex-action@v1
+        uses: google-github-actions/run-gemini-cli@main
         with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          model: gpt-5.2-codex
-          sandbox: workspace-read
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: gemini-3-flash-preview
           prompt: |
             # ROLE
 
@@ -129,65 +130,59 @@ jobs:
                   "severity": "high",
                   "rule": "reentrancy-risk",
                   "title": "Reentrancy in withdraw()",
-                  "message": "State variable `balances` is updated after external call. Attacker can re-enter and drain funds.",
+                  "message": "State variable `balances` is updated after external call to `recipient.call()`. Attacker can re-enter and drain funds.",
                   "recommendation": "Update state before external call or add nonReentrant modifier."
                 }
               ],
-              "summary": "Found 1 high severity issue.",
+              "summary": "Found 1 high severity issue: reentrancy in withdraw function.",
               "filesReviewed": ["src/Vault.sol"]
             }
             ```
 
-            Rules for findings:
-            - `file`: Relative path from repo root
-            - `line`: Actual line number in FILE (not diff line)
+            Field requirements:
+            - `file`: Relative path from repo root (e.g., "src/Vault.sol")
+            - `line`: Actual line number in the FILE (not diff line)
+            - `endLine`: Optional, last line of the issue
             - `severity`: One of: critical, high, medium, low, info
-            - `rule`: kebab-case identifier
-            - `title`: Short description
-            - `message`: What's wrong and why exploitable
-            - `recommendation`: How to fix
+            - `rule`: kebab-case identifier (e.g., "reentrancy-risk")
+            - `title`: Short title (e.g., "Reentrancy in withdraw()")
+            - `message`: What's wrong and why it's exploitable
+            - `recommendation`: How to fix it
 
             If no issues found:
             ```json
             {
               "findings": [],
-              "summary": "No security issues found.",
-              "filesReviewed": ["src/Vault.sol"]
+              "summary": "No security issues found in the changed code.",
+              "filesReviewed": ["src/Vault.sol", "src/Token.sol"]
             }
             ```
 
-            Create the file:
-            ```bash
-            cat > findings.json << 'EOF'
-            {
-              "findings": [...],
-              "summary": "...",
-              "filesReviewed": [...]
-            }
-            EOF
-            ```
+            # CRITICAL REQUIREMENTS
 
-            Verify it was created:
-            ```bash
-            cat findings.json
-            ```
+            1. You MUST write the `findings.json` file
+            2. The JSON must be valid and match the schema exactly
+            3. Do NOT include any text outside the JSON in the file
 
-      # Convert simple JSON to valid SARIF (deterministic, no LLM)
-      - name: Convert to SARIF
+            Write the file now using your file writing capabilities.
+
+      - name: Validate Output
         if: steps.diff.outputs.has_changes == 'true' && always()
         run: |
-          # Check if findings.json exists
           if [ ! -f findings.json ]; then
-            echo "No findings.json from Codex, creating empty one"
+            echo "findings.json not created, using empty default"
             echo '{"findings":[],"summary":"Review did not complete","filesReviewed":[]}' > findings.json
           fi
 
           # Validate JSON
           if ! jq empty findings.json 2>/dev/null; then
-            echo "Invalid JSON in findings.json, creating empty one"
-            echo '{"findings":[],"summary":"Invalid JSON output","filesReviewed":[]}' > findings.json
+            echo "Invalid JSON in findings.json, using empty default"
+            echo '{"findings":[],"summary":"Review produced invalid JSON","filesReviewed":[]}' > findings.json
           fi
 
+      - name: Convert to SARIF
+        if: steps.diff.outputs.has_changes == 'true' && always()
+        run: |
           # Convert to SARIF using jq
           jq -r '
           {
@@ -196,7 +191,7 @@ jobs:
             "runs": [{
               "tool": {
                 "driver": {
-                  "name": "AI Security Review (Codex)",
+                  "name": "AI Security Review (Gemini)",
                   "version": "1.0.0",
                   "informationUri": "https://github.com/slvDev/weasel",
                   "rules": [.findings[] | {
@@ -209,7 +204,7 @@ jobs:
                                elif .severity == "medium" then "warning"
                                else "note" end)
                     },
-                    "help": {"text": (.recommendation // "No recommendation provided"), "markdown": (.recommendation // "No recommendation provided")}
+                    "help": {"text": .recommendation, "markdown": .recommendation}
                   }] | unique_by(.id),
                   "properties": {
                     "summary": .summary,
@@ -236,7 +231,7 @@ jobs:
                   "primaryLocationLineHash": "\(.file):\(.line):\(.rule)"
                 },
                 "fixes": [{
-                  "description": {"text": (.recommendation // "No recommendation provided")}
+                  "description": {"text": .recommendation}
                 }]
               }]
             }]

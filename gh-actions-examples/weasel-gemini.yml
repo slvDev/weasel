@@ -1,18 +1,18 @@
-# Example: AI-filtered security analysis with OpenAI Codex
-# Copy to .github/workflows/ and add OPENAI_API_KEY secret
+# Example: AI-filtered security analysis with Gemini CLI
+# Copy to .github/workflows/ and add GEMINI_API_KEY secret
 #
 # This workflow:
-# 1. Codex analyzes contracts via Weasel MCP
-# 2. Codex identifies false positives with reasoning
-# 3. Codex runs Weasel CLI excluding false positives
+# 1. Gemini analyzes contracts via Weasel MCP
+# 2. Gemini identifies false positives with reasoning
+# 3. Gemini runs Weasel CLI excluding false positives
 # 4. Uploads filtered SARIF to GitHub Code Scanning
 #
 # Result: Clean security findings in GitHub Security tab (no noise)
 #
 # Requirements:
-# - OPENAI_API_KEY secret in your repository
+# - GEMINI_API_KEY secret in your repository
 
-name: Weasel + Codex (Filtered SARIF)
+name: Weasel + Gemini (Filtered SARIF)
 
 on:
   pull_request:
@@ -39,29 +39,23 @@ jobs:
           curl -sSL https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
           echo "$HOME/.weasel/bin" >> $GITHUB_PATH
 
-      - name: Setup Codex MCP Config
-        run: |
-          mkdir -p ~/.codex
-          cat > ~/.codex/config.toml << 'EOF'
-          # Weasel MCP server for Solidity static analysis
-          [mcp_servers.weasel]
-          command = "weasel"
-          args = ["mcp", "serve"]
-          enabled_tools = ["weasel_analyze", "weasel_finding_details", "weasel_detectors"]
-          startup_timeout_sec = 30
-          tool_timeout_sec = 180
-          EOF
-
       # Model options:
-      #   gpt-4.1-mini      - Fast & cheap, daily CI
-      #   gpt-5.2-codex     - Default, recommended for security review
+      #   gemini-3-flash-preview - Fast & cheap, recommended for CI
+      #   gemini-3-pro-preview   - Best reasoning, higher cost
       - name: AI Security Analysis
-        uses: openai/codex-action@v1
+        uses: google-github-actions/run-gemini-cli@main
         with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          codex-home: ~/.codex
-          model: gpt-5.2-codex
-          sandbox: workspace-write
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: gemini-3-flash-preview
+          settings: |
+            {
+              "mcpServers": {
+                "weasel": {
+                  "command": "weasel",
+                  "args": ["mcp", "serve"]
+                }
+              }
+            }
           prompt: |
             # ROLE
             You are a senior Solidity security auditor. Your task is to analyze smart contracts
@@ -153,8 +147,9 @@ jobs:
 
             # SELF-CHECK BEFORE COMPLETING
             Before finishing, verify:
+            - Did I read README.md for project context and known issues?
             - Did I run `weasel_analyze` to get findings?
-            - Did I analyze each High/Medium finding?
+            - Did I READ the actual code for each High/Medium finding?
             - Did I execute `weasel run ... -o weasel-filtered.sarif`?
             - Does the file `weasel-filtered.sarif` exist?
 

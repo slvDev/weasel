@@ -4,11 +4,11 @@
 # This workflow:
 # 1. Extracts the Solidity diff from the PR
 # 2. Claude reviews changed lines for security issues
-# 3. Outputs simple JSON (validated) → converts to SARIF
-# 4. SARIF uploaded → findings appear INLINE on PR code
+# 3. Outputs simple JSON (validated) -> converts to SARIF
+# 4. SARIF uploaded -> findings appear INLINE on PR code
 #
 # Architecture (reliable):
-#   Claude → Simple JSON (--json-schema validated) → jq → Valid SARIF
+#   Claude -> Simple JSON (--json-schema validated) -> jq -> Valid SARIF
 #
 # Results show in:
 # - "Files changed" tab: Inline annotations on exact lines

@@ -11,7 +11,6 @@
 #
 # Requirements:
 # - ANTHROPIC_API_KEY secret in your repository
-# - See docs/AI_ACTIONS_INTEGRATION.md for full setup guide
 
 name: Weasel + Claude (Filtered SARIF)
 
@@ -149,11 +148,11 @@ jobs:
 
             # SELF-CHECK BEFORE COMPLETING
             Before returning your response, verify:
-            ✓ Did I read README.md for project context and known issues?
-            ✓ Did I run `weasel_analyze` to get findings?
-            ✓ Did I READ the actual code for each High/Medium finding?
-            ✓ Did I execute `weasel run ... -o weasel-filtered.sarif`?
-            ✓ Does the file `weasel-filtered.sarif` exist?
+            - Did I read README.md for project context and known issues?
+            - Did I run `weasel_analyze` to get findings?
+            - Did I READ the actual code for each High/Medium finding?
+            - Did I execute `weasel run ... -o weasel-filtered.sarif`?
+            - Does the file `weasel-filtered.sarif` exist?
 
       # Upload the filtered SARIF to GitHub Code Scanning
       - name: Upload SARIF

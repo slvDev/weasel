@@ -27,7 +27,7 @@ curl -L https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | 
 /plugin marketplace add slvDev/weasel
 /plugin install weasel
 
-# MCP only for Claude Code (if you don't want skills), Cursor, Windsurf
+# MCP only for Claude Code, Cursor, Windsurf, Codex, Gemini
 weasel mcp add
 ```
 
@@ -49,7 +49,7 @@ Weasel skills activate. Your AI runs analysis, writes PoCs, formats reports, and
 
 - **AI-Native Skills** — 9 specialized skills for Claude Code (PoC writing, report formatting, gas optimization, and more)
 - **Blazing Fast** — Parallel Rust analysis, instant MCP responses
-- **MCP Server** — Works with Claude Code, Cursor, Windsurf, and any MCP-compatible tool
+- **MCP Server** — Works with Claude Code, Cursor, Windsurf, OpenAI Codex, Gemini CLI, and any MCP-compatible tool
 - **Extensive Detectors** — Vulnerabilities, gas optimizations, and code quality checks
 - **Auto-Detection** — Automatically configures for Foundry, Hardhat, and Truffle projects
 
@@ -125,20 +125,24 @@ Use `weasel` prefix to activate skills:
 
 ## IDE Integration (MCP)
 
-For **Cursor**, **Windsurf**, or Claude Code without skills:
+For **Cursor**, **Windsurf**, **Codex**, **Gemini**, or Claude Code without skills:
 
 ```bash
 weasel mcp add                      # auto-detect all installed IDEs
 weasel mcp add --target cursor      # Cursor only
 weasel mcp add --target windsurf    # Windsurf only
 weasel mcp add --target claude      # Claude Code only
+weasel mcp add --target codex       # OpenAI Codex only
+weasel mcp add --target gemini      # Gemini CLI only
 ```
 
-| IDE         | MCP Tools | Skills                     |
-| ----------- | --------- | -------------------------- |
-| Claude Code | ✅        | ✅ (via `/plugin install`) |
-| Cursor      | ✅        | ❌                         |
-| Windsurf    | ✅        | ❌                         |
+| IDE          | MCP Tools | Skills                     |
+| ------------ | --------- | -------------------------- |
+| Claude Code  | yes       | yes (via `/plugin install`) |
+| Cursor       | yes       | no                         |
+| Windsurf     | yes       | no                         |
+| OpenAI Codex | yes       | no                         |
+| Gemini CLI   | yes       | no                         |
 
 MCP tools (`weasel_analyze`, `weasel_finding_details`, `weasel_detectors`) work in all IDEs. Skills (PoC writing, report formatting, etc.) are Claude Code exclusive.
 
@@ -276,7 +280,7 @@ Requires `security-events: write` permission.
 
 ### AI-Powered Review (Experimental)
 
-Combine Weasel with Claude or OpenAI for intelligent security review:
+Combine Weasel with Claude, OpenAI, or Gemini for intelligent security review:
 
 ```yaml
 - uses: anthropics/claude-code-action@v1
@@ -295,8 +299,10 @@ AI can analyze findings, filter false positives, and suggest fixes.
 | `weasel-basic.yml` | Basic Weasel analysis with SARIF upload |
 | `weasel-claude.yml` | Claude filters false positives, outputs clean SARIF |
 | `weasel-openai.yml` | OpenAI Codex filters false positives, outputs clean SARIF |
+| `weasel-gemini.yml` | Gemini filters false positives, outputs clean SARIF |
 | `weasel-claude-diff.yml` | Claude reviews PR diff for logic bugs |
 | `weasel-openai-diff.yml` | OpenAI reviews PR diff for logic bugs |
+| `weasel-gemini-diff.yml` | Gemini reviews PR diff for logic bugs |
 
 
 ### Verify Downloads
