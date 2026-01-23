@@ -44,8 +44,17 @@ pub fn execute_analyze(arguments: &Value) -> Result<Value, JsonRpcError> {
                 .collect()
         });
 
+    let exclude_detectors: Option<Vec<String>> = arguments
+        .get("exclude_detectors")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        });
+
     let scope = path.map(|p| vec![p]);
-    let config = load_config(scope, exclude, severity, None, None, None, None);
+    let config = load_config(scope, exclude, severity, None, None, None, exclude_detectors);
 
     let mut engine = AnalysisEngine::new(&config);
     engine.register_built_in_detectors();

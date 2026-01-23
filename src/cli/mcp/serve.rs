@@ -221,6 +221,11 @@ fn handle_tools_list() -> Result<Value, JsonRpcError> {
                             "type": "array",
                             "items": {"type": "string"},
                             "description": "Paths to exclude from analysis (e.g., ['test', 'mocks', 'interfaces'])"
+                        },
+                        "exclude_detectors": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Detector IDs to exclude from analysis (e.g., ['floating-pragma', 'unused-import'])"
                         }
                     },
                     "required": []
