@@ -1,0 +1,196 @@
+# Example: AI-filtered security analysis with OpenAI Codex
+# Copy to .github/workflows/ and add OPENAI_API_KEY secret
+#
+# This workflow:
+# 1. Codex analyzes contracts via Weasel MCP
+# 2. Codex identifies false positives with reasoning
+# 3. Codex runs Weasel CLI excluding false positives
+# 4. Uploads filtered SARIF to GitHub Code Scanning
+#
+# Result: Clean security findings in GitHub Security tab (no noise)
+#
+# Requirements:
+# - OPENAI_API_KEY secret in your repository
+# - See docs/AI_ACTIONS_INTEGRATION.md for full setup guide
+
+name: Weasel + Codex (Filtered SARIF)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths: ['**.sol']  # Only run on Solidity changes
+  # Uncomment to also run on push to main/develop
+  # push:
+  #   branches: [main, develop]
+  #   paths: ['**.sol']
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write  # Required for SARIF upload
+
+jobs:
+  security-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Weasel
+        run: |
+          curl -sSL https://raw.githubusercontent.com/slvDev/weasel/main/weaselup/install | bash
+          echo "$HOME/.weasel/bin" >> $GITHUB_PATH
+
+      - name: Setup Codex MCP Config
+        run: |
+          mkdir -p ~/.codex
+          cat > ~/.codex/config.toml << 'EOF'
+          # Weasel MCP server for Solidity static analysis
+          [mcp_servers.weasel]
+          command = "weasel"
+          args = ["mcp", "serve"]
+          enabled_tools = ["weasel_analyze", "weasel_finding_details", "weasel_detectors"]
+          startup_timeout_sec = 30
+          tool_timeout_sec = 180
+          EOF
+
+      # Model options:
+      #   gpt-4.1-mini      - Fast & cheap, daily CI
+      #   gpt-5.2-codex     - Default, recommended for security review
+      - name: AI Security Analysis
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          codex-home: ~/.codex
+          model: gpt-5.2-codex
+          sandbox: workspace-write
+          prompt: |
+            # ROLE
+            You are a senior Solidity security auditor. Your task is to analyze smart contracts
+            and produce a FILTERED SARIF report with only real vulnerabilities (no false positives).
+
+            # CONTEXT
+            This runs in CI/CD. The SARIF file will be uploaded to GitHub Security tab.
+            If you don't generate the SARIF file, the workflow fails and provides no value.
+            False positives in the report waste developer time and erode trust in the tool.
+
+            # CRITICAL REQUIREMENTS
+            - You MUST execute `weasel run` command to generate SARIF file
+            - The file MUST be named exactly: `weasel-filtered.sarif`
+            - This is a MANDATORY deliverable - do not complete without generating the file
+
+            # STEP-BY-STEP INSTRUCTIONS
+
+            ## Step 1: Read Project Context (IMPORTANT - DO THIS FIRST)
+            Before analyzing findings, understand the project:
+
+            1. **Read README.md** (if exists):
+               - What does the protocol do?
+               - Trust assumptions (who is trusted?)
+               - Known limitations or design decisions
+
+            2. **Check for known issues** (look for these files):
+               - `known-issues.md`, `KNOWN_ISSUES.md`
+               - `audit/` folder with previous findings
+
+            **Why this matters:**
+            - Avoid reporting documented design decisions as bugs
+            - Avoid duplicating known issues
+
+            ## Step 2: Run Initial Analysis
+            Call `weasel_analyze` MCP tool with parameter: severity="Low"
+            Do NOT specify path - Weasel auto-detects from weasel.toml, foundry.toml, or hardhat.config.
+
+            ## Step 3: Triage Each Finding
+            For each High/Medium finding:
+            1. Call `weasel_finding_details` with the detector ID
+            2. Read the affected source file at the reported location
+            3. Check: Does this match a known issue or design decision from Step 1?
+            4. Verify: Is there existing protection (modifier, guard, check)?
+            5. Classify the DETECTOR as: REAL ISSUES or FALSE POSITIVES
+
+            Classification criteria for FALSE POSITIVE detector:
+            - All instances are protected by existing guards
+            - Matches documented design decision in README
+            - Listed in known-issues file
+
+            **Important:** You are filtering DETECTORS, not individual findings.
+            Only exclude a detector if ALL its findings are false positives.
+
+            **Don't assume** - ALWAYS read the actual code at the reported location.
+
+            Track detector IDs that should be excluded.
+
+            ## Step 4: Generate Filtered SARIF (MANDATORY)
+            Run weasel CLI to generate filtered SARIF. Weasel auto-detects source paths from config.
+
+            Base command:
+            ```bash
+            weasel run -m Medium -f sarif -o weasel-filtered.sarif
+            ```
+
+            If you found false positive detectors, add `-x` for each one:
+            ```bash
+            weasel run -m Medium -f sarif -o weasel-filtered.sarif -x floating-pragma -x unused-import
+            ```
+
+            Rules:
+            - Do NOT use `-s` flag - Weasel reads paths from weasel.toml/foundry.toml/hardhat.config
+            - Add `-x <detector_id>` for EACH false positive detector you identified
+            - The output file MUST be exactly `weasel-filtered.sarif`
+
+            ## Step 4: Verify Output
+            After running the command, verify the file exists:
+            ```bash
+            ls -la weasel-filtered.sarif
+            ```
+
+            If the file doesn't exist, something went wrong. Check the error and retry.
+
+            # FINAL OUTPUT
+            After generating SARIF, provide a brief summary:
+            - Number of real issues found
+            - Detectors excluded as false positives (and why)
+            - Any critical issues requiring immediate attention
+
+            # SELF-CHECK BEFORE COMPLETING
+            Before finishing, verify:
+            ✓ Did I run `weasel_analyze` to get findings?
+            ✓ Did I analyze each High/Medium finding?
+            ✓ Did I execute `weasel run ... -o weasel-filtered.sarif`?
+            ✓ Does the file `weasel-filtered.sarif` exist?
+
+            DO NOT finish until the SARIF file is generated.
+
+      # Upload the filtered SARIF to GitHub Code Scanning
+      - name: Upload SARIF
+        if: always() && hashFiles('weasel-filtered.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: weasel-filtered.sarif
+          category: weasel-filtered
+
+      # Upload SARIF as artifact for debugging
+      - name: Upload SARIF Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weasel-sarif
+          path: weasel-filtered.sarif
+          if-no-files-found: ignore
+
+      # Show analysis results in job summary
+      - name: Analysis Summary
+        if: always()
+        run: |
+          echo "## Weasel Security Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f weasel-filtered.sarif ]; then
+            FINDINGS=$(jq '.runs[0].results | length' weasel-filtered.sarif 2>/dev/null || echo "0")
+            echo "**SARIF generated successfully**" >> $GITHUB_STEP_SUMMARY
+            echo "**Real findings:** $FINDINGS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**SARIF file not generated**" >> $GITHUB_STEP_SUMMARY
+            echo "Check the AI Security Analysis step for errors." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [Security tab](../../security/code-scanning) for details." >> $GITHUB_STEP_SUMMARY

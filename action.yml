@@ -12,7 +12,7 @@ inputs:
     required: false
     default: 'latest'
   path:
-    description: 'Path to analyze (file or directory)'
+    description: 'Path to analyze. If omitted, auto-detects from weasel.toml/foundry.toml/hardhat.config'
     required: false
     default: '.'
   min-severity:
@@ -111,7 +111,14 @@ runs:
       shell: bash
       run: |
         # Build common args
-        COMMON_ARGS="--scope ${{ inputs.path }} --min-severity ${{ inputs.min-severity }}"
+        COMMON_ARGS="--min-severity ${{ inputs.min-severity }}"
+
+        # Only add --scope if user explicitly set path (not default '.')
+        # This allows Weasel to auto-detect from weasel.toml/foundry.toml/hardhat.config
+        PATH_INPUT="${{ inputs.path }}"
+        if [ "$PATH_INPUT" != "." ]; then
+          COMMON_ARGS="--scope $PATH_INPUT $COMMON_ARGS"
+        fi
 
         # Add excludes
         EXCLUDE_INPUT="${{ inputs.exclude }}"

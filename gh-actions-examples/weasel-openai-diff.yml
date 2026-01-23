@@ -1,0 +1,300 @@
+# Example: AI-powered PR diff security review with SARIF output
+# Copy to .github/workflows/ and add OPENAI_API_KEY secret
+#
+# This workflow:
+# 1. Extracts the Solidity diff from the PR
+# 2. Codex reviews changed lines for security issues
+# 3. Outputs simple JSON → converts to SARIF
+# 4. SARIF uploaded → findings appear INLINE on PR code
+#
+# Architecture (reliable):
+#   Codex → Simple JSON → jq → Valid SARIF
+#
+# Results show in:
+# - "Files changed" tab: Inline annotations on exact lines
+# - Security tab: All findings tracked
+# - Job summary: Quick overview
+#
+# Requirements:
+# - OPENAI_API_KEY secret in your repository
+
+name: AI Diff Review (Codex)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths: ['**.sol']
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  diff-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Solidity Diff
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD -- '*.sol' > solidity.diff
+          if [ -s solidity.diff ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Skip if no changes
+        if: steps.diff.outputs.has_changes != 'true'
+        run: echo "No Solidity changes, skipping"
+
+      - name: AI Security Review
+        if: steps.diff.outputs.has_changes == 'true'
+        id: review
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.2-codex
+          sandbox: workspace-read
+          prompt: |
+            # ROLE
+
+            You are a senior Solidity security auditor performing focused PR review.
+            Expertise: reentrancy, access control, arithmetic, flash loans, oracles.
+
+            **Mandate: Be thorough and critical.** Find real issues.
+
+            # CONTEXT
+
+            Review the Solidity diff in `solidity.diff` for security issues.
+            Focus on bugs INTRODUCED by the changes.
+
+            # PROCESS
+
+            ## Step 1: Read the Diff
+            Read the file `solidity.diff` to see all changes.
+
+            ## Step 2: For Each Change, Check:
+
+            **Access Control:**
+            - Modifier removed/weakened?
+            - New function without access control?
+            - msg.sender check bypassable?
+
+            **State & Reentrancy:**
+            - State updated AFTER external call?
+            - Missing reentrancy guard?
+
+            **Arithmetic:**
+            - Overflow/underflow (check casts even in 0.8+)?
+            - Division by zero?
+            - Off-by-one (< vs <=)?
+
+            **Logic:**
+            - Wrong operator (AND vs OR)?
+            - Incorrect loop bounds?
+            - Missing edge case?
+
+            ## Step 3: Read Full File if Needed
+            If context unclear, read the source file to check modifiers, state vars.
+
+            ## Step 4: Verify Findings
+            Before reporting, confirm:
+            - Is it actually reachable?
+            - Is there existing protection?
+            - What's the real impact?
+
+            # SEVERITY LEVELS
+
+            - **critical**: Direct fund loss, complete access bypass
+            - **high**: Significant loss, privilege escalation
+            - **medium**: Limited loss, griefing
+            - **low**: Best practice, minor issues
+            - **info**: Suggestions only
+
+            # OUTPUT FORMAT
+
+            You MUST create a file called `findings.json` with this exact structure:
+
+            ```json
+            {
+              "findings": [
+                {
+                  "file": "src/Vault.sol",
+                  "line": 42,
+                  "endLine": 45,
+                  "severity": "high",
+                  "rule": "reentrancy-risk",
+                  "title": "Reentrancy in withdraw()",
+                  "message": "State variable `balances` is updated after external call. Attacker can re-enter and drain funds.",
+                  "recommendation": "Update state before external call or add nonReentrant modifier."
+                }
+              ],
+              "summary": "Found 1 high severity issue.",
+              "filesReviewed": ["src/Vault.sol"]
+            }
+            ```
+
+            Rules for findings:
+            - `file`: Relative path from repo root
+            - `line`: Actual line number in FILE (not diff line)
+            - `severity`: One of: critical, high, medium, low, info
+            - `rule`: kebab-case identifier
+            - `title`: Short description
+            - `message`: What's wrong and why exploitable
+            - `recommendation`: How to fix
+
+            If no issues found:
+            ```json
+            {
+              "findings": [],
+              "summary": "No security issues found.",
+              "filesReviewed": ["src/Vault.sol"]
+            }
+            ```
+
+            Create the file:
+            ```bash
+            cat > findings.json << 'EOF'
+            {
+              "findings": [...],
+              "summary": "...",
+              "filesReviewed": [...]
+            }
+            EOF
+            ```
+
+            Verify it was created:
+            ```bash
+            cat findings.json
+            ```
+
+      # Convert simple JSON to valid SARIF (deterministic, no LLM)
+      - name: Convert to SARIF
+        if: steps.diff.outputs.has_changes == 'true' && always()
+        run: |
+          # Check if findings.json exists
+          if [ ! -f findings.json ]; then
+            echo "No findings.json from Codex, creating empty one"
+            echo '{"findings":[],"summary":"Review did not complete","filesReviewed":[]}' > findings.json
+          fi
+
+          # Validate JSON
+          if ! jq empty findings.json 2>/dev/null; then
+            echo "Invalid JSON in findings.json, creating empty one"
+            echo '{"findings":[],"summary":"Invalid JSON output","filesReviewed":[]}' > findings.json
+          fi
+
+          # Convert to SARIF using jq
+          jq -r '
+          {
+            "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [{
+              "tool": {
+                "driver": {
+                  "name": "AI Security Review (Codex)",
+                  "version": "1.0.0",
+                  "informationUri": "https://github.com/slvDev/weasel",
+                  "rules": [.findings[] | {
+                    "id": .rule,
+                    "name": .title,
+                    "shortDescription": {"text": .title},
+                    "fullDescription": {"text": .message},
+                    "defaultConfiguration": {
+                      "level": (if .severity == "critical" or .severity == "high" then "error"
+                               elif .severity == "medium" then "warning"
+                               else "note" end)
+                    },
+                    "help": {"text": (.recommendation // "No recommendation provided"), "markdown": (.recommendation // "No recommendation provided")}
+                  }] | unique_by(.id),
+                  "properties": {
+                    "summary": .summary,
+                    "filesReviewed": .filesReviewed
+                  }
+                }
+              },
+              "results": [.findings[] | {
+                "ruleId": .rule,
+                "level": (if .severity == "critical" or .severity == "high" then "error"
+                         elif .severity == "medium" then "warning"
+                         else "note" end),
+                "message": {"text": .message},
+                "locations": [{
+                  "physicalLocation": {
+                    "artifactLocation": {"uri": .file},
+                    "region": {
+                      "startLine": .line,
+                      "endLine": (.endLine // .line)
+                    }
+                  }
+                }],
+                "partialFingerprints": {
+                  "primaryLocationLineHash": "\(.file):\(.line):\(.rule)"
+                },
+                "fixes": [{
+                  "description": {"text": (.recommendation // "No recommendation provided")}
+                }]
+              }]
+            }]
+          }' findings.json > ai-review.sarif
+
+          # Validate SARIF was created
+          if [ -f ai-review.sarif ]; then
+            FINDINGS=$(jq '.runs[0].results | length' ai-review.sarif)
+            echo "SARIF created with $FINDINGS findings"
+          else
+            echo "Failed to create SARIF"
+            exit 1
+          fi
+
+      - name: Upload SARIF
+        if: steps.diff.outputs.has_changes == 'true' && always() && hashFiles('ai-review.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ai-review.sarif
+          category: ai-diff-review
+
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review
+          path: |
+            findings.json
+            ai-review.sarif
+            solidity.diff
+          if-no-files-found: ignore
+
+      - name: Summary
+        if: steps.diff.outputs.has_changes == 'true' && always()
+        run: |
+          echo "## AI Security Review" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f findings.json ]; then
+            SUMMARY=$(jq -r '.summary' findings.json)
+            FINDINGS=$(jq '.findings | length' findings.json)
+            FILES=$(jq -r '.filesReviewed | join(", ")' findings.json)
+
+            echo "**Summary:** $SUMMARY" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Files reviewed:** $FILES" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            if [ "$FINDINGS" != "0" ]; then
+              echo "### Findings ($FINDINGS)" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              jq -r '.findings[] | "- **[\(.severity | ascii_upcase)]** \(.title) - `\(.file):\(.line)`"' findings.json >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "See inline annotations in **Files changed** tab." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "Review output not available." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "[View in Security tab](../../security/code-scanning)" >> $GITHUB_STEP_SUMMARY

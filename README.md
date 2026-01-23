@@ -274,6 +274,31 @@ Enable inline findings in PR diffs and the Security tab:
 
 Requires `security-events: write` permission.
 
+### AI-Powered Review (Experimental)
+
+Combine Weasel with Claude or OpenAI for intelligent security review:
+
+```yaml
+- uses: anthropics/claude-code-action@v1
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    claude_args: |
+      --mcp-config '{"mcpServers":{"weasel":{"command":"weasel","args":["mcp","serve"]}}}'
+```
+
+AI can analyze findings, filter false positives, and suggest fixes.
+
+**Ready-to-use examples** in [`gh-actions-examples/`](gh-actions-examples/):
+
+| File | Description |
+|------|-------------|
+| `weasel-basic.yml` | Basic Weasel analysis with SARIF upload |
+| `weasel-claude.yml` | Claude filters false positives, outputs clean SARIF |
+| `weasel-openai.yml` | OpenAI Codex filters false positives, outputs clean SARIF |
+| `weasel-claude-diff.yml` | Claude reviews PR diff for logic bugs |
+| `weasel-openai-diff.yml` | OpenAI reviews PR diff for logic bugs |
+
+
 ### Verify Downloads
 
 Release binaries include SHA256 checksums and build attestation:

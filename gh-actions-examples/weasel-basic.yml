@@ -1,0 +1,99 @@
+# Example: Basic Weasel static analysis (no AI)
+# Copy to .github/workflows/security.yml
+#
+# This workflow runs Weasel static analysis on every PR and push.
+# Weasel auto-detects source paths from weasel.toml, foundry.toml, or hardhat.config.
+
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['**.sol']  # Only run on Solidity changes
+  pull_request:
+    paths: ['**.sol']
+
+# Required for SARIF upload and PR comments
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  weasel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Weasel auto-detects paths from weasel.toml/foundry.toml/hardhat.config
+      - name: Run Weasel
+        uses: slvDev/weasel@main
+        id: weasel
+        with:
+          # Minimum severity to report: High, Medium, Low, Gas, NC
+          min-severity: Low
+
+          # Paths to exclude (comma-separated)
+          exclude: test,script,mocks
+
+          # Fail CI if findings at this severity or higher
+          # Options: High, Medium, Low, none
+          fail-on: High
+
+          # Generate SARIF for GitHub Code Scanning
+          sarif: true
+
+          # Upload SARIF to Security tab (requires security-events: write)
+          upload-sarif: true
+
+      # Optional: Comment findings count on PR
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.weasel.outputs.findings != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔍 Weasel Security Scan\n\nFound **${{ steps.weasel.outputs.findings }}** issues.\n\nSee the Security tab for details.`
+            })
+
+# ============================================================================
+#
+# Minimal - just run analysis (auto-detects everything)
+# - uses: slvDev/weasel@main
+#
+# Nightly build (latest dev version)
+# - uses: slvDev/weasel@main
+#   with:
+#     version: nightly
+#
+# Specific version
+# - uses: slvDev/weasel@main
+#   with:
+#     version: 0.4.6
+#
+# High severity only, fail on any finding
+# - uses: slvDev/weasel@main
+#   with:
+#     min-severity: High
+#     fail-on: High
+#
+# Custom config file
+# - uses: slvDev/weasel@main
+#   with:
+#     config: ./weasel.toml
+#
+# ============================================================================
+# Optional steps (add after Run Weasel step):
+# ============================================================================
+#
+# Upload JSON report as artifact (for debugging/integrations)
+# - name: Upload JSON Report
+#   if: always()
+#   uses: actions/upload-artifact@v4
+#   with:
+#     name: weasel-json
+#     path: ${{ steps.weasel.outputs.report }}
+#     if-no-files-found: ignore
