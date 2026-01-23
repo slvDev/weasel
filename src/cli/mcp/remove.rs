@@ -1,6 +1,7 @@
 use super::tools::AiTool;
 use serde_json::Value;
 use std::fs;
+use toml;
 
 pub fn handle_remove(target: Option<String>) {
     println!("Removing Weasel MCP server...\n");
@@ -10,7 +11,7 @@ pub fn handle_remove(target: Option<String>) {
             Some(tool) => vec![tool],
             None => {
                 eprintln!("Unknown target: {}", target_id);
-                eprintln!("Available targets: claude, cursor, windsurf");
+                eprintln!("Available targets: claude, cursor, windsurf, codex");
                 std::process::exit(1);
             }
         },
@@ -48,6 +49,10 @@ pub fn handle_remove(target: Option<String>) {
 }
 
 fn remove_from_tool(tool: &AiTool) -> Result<bool, String> {
+    if tool.uses_toml() {
+        return remove_from_toml_config(tool);
+    }
+
     let config_path = match tool.config_path() {
         Some(path) if path.exists() => path,
         _ => return Ok(false),
@@ -73,6 +78,39 @@ fn remove_from_tool(tool: &AiTool) -> Result<bool, String> {
     if removed {
         let output = serde_json::to_string_pretty(&config)
             .map_err(|e| format!("Failed to serialize config: {}", e))?;
+
+        fs::write(&config_path, output).map_err(|e| format!("Failed to write config: {}", e))?;
+    }
+
+    Ok(removed)
+}
+
+fn remove_from_toml_config(tool: &AiTool) -> Result<bool, String> {
+    let config_path = match tool.config_path() {
+        Some(path) if path.exists() => path,
+        _ => return Ok(false),
+    };
+
+    let content =
+        fs::read_to_string(&config_path).map_err(|e| format!("Failed to read config: {}", e))?;
+
+    let mut config: toml::Table = content
+        .parse()
+        .map_err(|e| format!("Failed to parse TOML: {}", e))?;
+
+    // Check if mcp_servers.weasel exists
+    let removed = if let Some(mcp_servers) = config
+        .get_mut("mcp_servers")
+        .and_then(|v| v.as_table_mut())
+    {
+        mcp_servers.remove("weasel").is_some()
+    } else {
+        false
+    };
+
+    if removed {
+        let output = toml::to_string_pretty(&config)
+            .map_err(|e| format!("Failed to serialize TOML: {}", e))?;
 
         fs::write(&config_path, output).map_err(|e| format!("Failed to write config: {}", e))?;
     }

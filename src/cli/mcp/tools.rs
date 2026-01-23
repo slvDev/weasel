@@ -6,6 +6,7 @@ pub enum AiTool {
     ClaudeCode,
     Cursor,
     Windsurf,
+    Codex,
 }
 
 impl AiTool {
@@ -14,6 +15,7 @@ impl AiTool {
             AiTool::ClaudeCode => "Claude Code",
             AiTool::Cursor => "Cursor",
             AiTool::Windsurf => "Windsurf",
+            AiTool::Codex => "OpenAI Codex",
         }
     }
 
@@ -26,6 +28,7 @@ impl AiTool {
                 .join(".codeium")
                 .join("windsurf")
                 .join("mcp_config.json"),
+            AiTool::Codex => home.join(".codex").join("config.toml"),
         })
     }
 
@@ -48,11 +51,12 @@ impl AiTool {
             AiTool::ClaudeCode => command_exists("claude"),
             AiTool::Cursor => command_exists("cursor"),
             AiTool::Windsurf => command_exists("windsurf"),
+            AiTool::Codex => command_exists("codex"),
         }
     }
 
     pub fn all() -> &'static [AiTool] {
-        &[AiTool::ClaudeCode, AiTool::Cursor, AiTool::Windsurf]
+        &[AiTool::ClaudeCode, AiTool::Cursor, AiTool::Windsurf, AiTool::Codex]
     }
 
     pub fn from_id(id: &str) -> Option<AiTool> {
@@ -60,6 +64,7 @@ impl AiTool {
             "claude" | "claude-code" | "claudecode" => Some(AiTool::ClaudeCode),
             "cursor" => Some(AiTool::Cursor),
             "windsurf" => Some(AiTool::Windsurf),
+            "codex" | "openai" | "openai-codex" => Some(AiTool::Codex),
             _ => None,
         }
     }
@@ -70,6 +75,10 @@ impl AiTool {
             .filter(|tool| tool.is_installed())
             .copied()
             .collect()
+    }
+
+    pub fn uses_toml(&self) -> bool {
+        matches!(self, AiTool::Codex)
     }
 }
 

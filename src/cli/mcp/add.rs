@@ -2,6 +2,7 @@ use super::tools::AiTool;
 use serde_json::{json, Map, Value};
 use std::fs;
 use std::path::Path;
+use toml;
 
 pub fn handle_add(target: Option<String>) {
     println!("Detecting AI tools...\n");
@@ -19,7 +20,7 @@ pub fn handle_add(target: Option<String>) {
                 }
                 None => {
                     eprintln!("Unknown target: {}", target_id);
-                    eprintln!("Available targets: claude, cursor, windsurf");
+                    eprintln!("Available targets: claude, cursor, windsurf, codex");
                     std::process::exit(1);
                 }
             }
@@ -42,7 +43,7 @@ pub fn handle_add(target: Option<String>) {
 
             if installed.is_empty() {
                 eprintln!("\nNo supported AI tools detected.");
-                eprintln!("Supported tools: Claude Code, Cursor, Windsurf");
+                eprintln!("Supported tools: Claude Code, Cursor, Windsurf, OpenAI Codex");
                 std::process::exit(1);
             }
 
@@ -86,6 +87,10 @@ pub fn handle_add(target: Option<String>) {
 }
 
 fn add_to_tool(tool: &AiTool, weasel_path: &Path) -> Result<(), String> {
+    if tool.uses_toml() {
+        return add_to_toml_config(tool, weasel_path);
+    }
+
     let config_path = tool
         .config_path()
         .ok_or_else(|| "Could not determine config path".to_string())?;
@@ -147,4 +152,65 @@ fn create_mcp_entry(weasel_path: &Path) -> Value {
     );
     entry.insert("args".to_string(), json!(["mcp", "serve"]));
     Value::Object(entry)
+}
+
+fn add_to_toml_config(tool: &AiTool, weasel_path: &Path) -> Result<(), String> {
+    let config_path = tool
+        .config_path()
+        .ok_or_else(|| "Could not determine config path".to_string())?;
+
+    // Ensure parent directory exists
+    if let Some(parent) = config_path.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create config directory: {}", e))?;
+        }
+    }
+
+    // Read existing config or create empty
+    let mut config: toml::Table = if config_path.exists() {
+        let content = fs::read_to_string(&config_path)
+            .map_err(|e| format!("Failed to read config: {}", e))?;
+        content
+            .parse()
+            .map_err(|e| format!("Failed to parse TOML: {}", e))?
+    } else {
+        toml::Table::new()
+    };
+
+    // Get or create mcp_servers table
+    if !config.contains_key("mcp_servers") {
+        config.insert(
+            "mcp_servers".to_string(),
+            toml::Value::Table(toml::Table::new()),
+        );
+    }
+
+    let mcp_servers = config
+        .get_mut("mcp_servers")
+        .and_then(|v| v.as_table_mut())
+        .ok_or_else(|| "mcp_servers is not a table".to_string())?;
+
+    // Create weasel entry
+    let mut weasel_entry = toml::Table::new();
+    weasel_entry.insert(
+        "command".to_string(),
+        toml::Value::String(weasel_path.to_string_lossy().to_string()),
+    );
+    weasel_entry.insert(
+        "args".to_string(),
+        toml::Value::Array(vec![
+            toml::Value::String("mcp".to_string()),
+            toml::Value::String("serve".to_string()),
+        ]),
+    );
+
+    mcp_servers.insert("weasel".to_string(), toml::Value::Table(weasel_entry));
+
+    // Write back
+    let output = toml::to_string_pretty(&config)
+        .map_err(|e| format!("Failed to serialize TOML: {}", e))?;
+    fs::write(&config_path, output).map_err(|e| format!("Failed to write config: {}", e))?;
+
+    Ok(())
 }
