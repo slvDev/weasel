@@ -23,6 +23,10 @@ on:
   #   branches: [main, develop]
   #   paths: ['**.sol']
 
+# Configuration
+env:
+  MIN_SEVERITY: Medium  # Options: High, Medium, Low, Gas, NC
+
 permissions:
   contents: read
   pull-requests: write
@@ -55,6 +59,9 @@ jobs:
       # Model options:
       #   gpt-4.1-mini      - Fast & cheap, daily CI
       #   gpt-5.2-codex     - Default, recommended for security review
+      #
+      # Debug options (uncomment to enable):
+      #   debug: true       - Enable debug logging
       - name: AI Security Analysis
         uses: openai/codex-action@v1
         with:
@@ -62,6 +69,7 @@ jobs:
           codex-home: ~/.codex
           model: gpt-5.2-codex
           sandbox: workspace-write
+          # debug: true
           prompt: |
             # ROLE
             You are a senior Solidity security auditor. Your task is to analyze smart contracts
@@ -124,12 +132,12 @@ jobs:
 
             Base command:
             ```bash
-            weasel run -m Medium -f sarif -o weasel-filtered.sarif
+            weasel run -m ${{ env.MIN_SEVERITY }} -f sarif -o weasel-filtered.sarif
             ```
 
             If you found false positive detectors, add `-x` for each one:
             ```bash
-            weasel run -m Medium -f sarif -o weasel-filtered.sarif -x floating-pragma -x unused-import
+            weasel run -m ${{ env.MIN_SEVERITY }} -f sarif -o weasel-filtered.sarif -x floating-pragma -x unused-import
             ```
 
             Rules:

@@ -51,6 +51,13 @@ jobs:
         if: steps.diff.outputs.has_changes != 'true'
         run: echo "No Solidity changes, skipping"
 
+      # Model options (cost vs quality):
+      #   claude-haiku-4-5-20251001  - Fast & cheap, daily CI
+      #   claude-sonnet-4-5-20250929 - Balanced, recommended
+      #
+      # Debug options (uncomment to enable):
+      #   --print   - Stream response to logs
+      #   --verbose - Verbose output
       - name: AI Security Review
         if: steps.diff.outputs.has_changes == 'true'
         id: review
@@ -60,6 +67,8 @@ jobs:
           claude_args: |
             --model claude-sonnet-4-5-20250929
             --allowedTools "Read,Bash(cat:*),Bash(head:*)"
+            # --print
+            # --verbose
             --json-schema '{"type":"object","properties":{"findings":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"line":{"type":"integer"},"endLine":{"type":"integer"},"severity":{"type":"string","enum":["critical","high","medium","low","info"]},"rule":{"type":"string"},"title":{"type":"string"},"message":{"type":"string"},"recommendation":{"type":"string"}},"required":["file","line","severity","rule","title","message"]}},"summary":{"type":"string"},"filesReviewed":{"type":"array","items":{"type":"string"}}},"required":["findings","summary","filesReviewed"]}'
           prompt: |
             # ROLE

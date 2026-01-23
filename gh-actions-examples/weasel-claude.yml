@@ -23,6 +23,10 @@ on:
   #   branches: [main, develop]
   #   paths: ['**.sol']
 
+# Configuration
+env:
+  MIN_SEVERITY: Medium  # Options: High, Medium, Low, Gas, NC
+
 permissions:
   contents: read
   pull-requests: write
@@ -42,6 +46,10 @@ jobs:
       # Model options (cost vs quality):
       #   claude-haiku-4-5-20251001  - Fast & cheap, daily CI
       #   claude-sonnet-4-5-20250929 - Balanced, recommended
+      #
+      # Debug options (uncomment to enable):
+      #   --print                  - Stream response to logs
+      #   --verbose                - Verbose output
       - name: AI Security Analysis
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -51,6 +59,8 @@ jobs:
             --mcp-config '{"mcpServers":{"weasel":{"command":"weasel","args":["mcp","serve"]}}}'
             --model claude-sonnet-4-5-20250929
             --allowedTools "mcp__weasel__weasel_analyze,mcp__weasel__weasel_finding_details,mcp__weasel__weasel_detectors,Read,Bash(weasel run:*),Bash(ls:*)"
+            # --print
+            # --verbose
             --json-schema '{"type":"object","properties":{"false_positive_detectors":{"type":"array","items":{"type":"string"}},"real_issues_count":{"type":"integer"},"sarif_generated":{"type":"boolean"},"summary":{"type":"string"}},"required":["false_positive_detectors","real_issues_count","sarif_generated","summary"]}'
           prompt: |
             # ROLE
@@ -118,12 +128,12 @@ jobs:
 
             Base command:
             ```bash
-            weasel run -m Medium -f sarif -o weasel-filtered.sarif
+            weasel run -m ${{ env.MIN_SEVERITY }} -f sarif -o weasel-filtered.sarif
             ```
 
             If you found false positive detectors, add `-x` for each one:
             ```bash
-            weasel run -m Medium -f sarif -o weasel-filtered.sarif -x floating-pragma -x unused-import
+            weasel run -m ${{ env.MIN_SEVERITY }} -f sarif -o weasel-filtered.sarif -x floating-pragma -x unused-import
             ```
 
             Rules:

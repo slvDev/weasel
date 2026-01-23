@@ -51,6 +51,12 @@ jobs:
         if: steps.diff.outputs.has_changes != 'true'
         run: echo "No Solidity changes, skipping"
 
+      # Model options:
+      #   gpt-4.1-mini  - Fast & cheap, daily CI
+      #   gpt-5.2-codex - Default, recommended
+      #
+      # Debug options (uncomment to enable):
+      #   debug: true - Enable debug logging
       - name: AI Security Review
         if: steps.diff.outputs.has_changes == 'true'
         id: review
@@ -59,6 +65,7 @@ jobs:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           model: gpt-5.2-codex
           sandbox: workspace-read
+          # debug: true
           prompt: |
             # ROLE
 

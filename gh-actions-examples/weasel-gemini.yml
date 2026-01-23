@@ -23,6 +23,10 @@ on:
   #   branches: [main, develop]
   #   paths: ['**.sol']
 
+# Configuration
+env:
+  MIN_SEVERITY: Medium  # Options: High, Medium, Low, Gas, NC
+
 permissions:
   contents: read
   pull-requests: write
@@ -42,11 +46,17 @@ jobs:
       # Model options:
       #   gemini-3-flash-preview - Fast & cheap, recommended for CI
       #   gemini-3-pro-preview   - Best reasoning, higher cost
+      #
+      # Debug options (uncomment to enable):
+      #   gemini_debug: true      - Stream response to logs
+      #   upload_artifacts: true  - Upload stdout.log, stderr.log
       - name: AI Security Analysis
         uses: google-github-actions/run-gemini-cli@main
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: gemini-3-flash-preview
+          # gemini_debug: true
+          # upload_artifacts: true
           settings: |
             {
               "mcpServers": {
@@ -118,12 +128,12 @@ jobs:
 
             Base command:
             ```bash
-            weasel run -m Medium -f sarif -o weasel-filtered.sarif
+            weasel run -m ${{ env.MIN_SEVERITY }} -f sarif -o weasel-filtered.sarif
             ```
 
             If you found false positive detectors, add `-x` for each one:
             ```bash
-            weasel run -m Medium -f sarif -o weasel-filtered.sarif -x floating-pragma -x unused-import
+            weasel run -m ${{ env.MIN_SEVERITY }} -f sarif -o weasel-filtered.sarif -x floating-pragma -x unused-import
             ```
 
             Rules:
