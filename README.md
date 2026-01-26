@@ -212,16 +212,25 @@ exclude = ["test", "script"]
 min_severity = "Low"
 format = "md"
 remappings = ["@openzeppelin/=lib/openzeppelin-contracts/"]
+exclude_detectors = ["floating-pragma", "line-length"]
+
+[protocol]
+uses_fot_tokens = true       # Fee-on-transfer token detectors
+uses_weird_erc20 = true      # Non-standard ERC20 detectors
+uses_native_token = true     # Native ETH handling detectors
+uses_l2 = true               # L2-specific detectors (Arbitrum, Optimism)
+uses_nft = true              # NFT-related detectors
 ```
 
-| Option           | Short | Default           |
-| ---------------- | ----- | ----------------- |
-| `--scope`        | `-s`  | `["src"]`         |
-| `--exclude`      | `-e`  | `["lib", "test"]` |
-| `--min-severity` | `-m`  | `NC`              |
-| `--format`       | `-f`  | `md`              |
-| `--output`       | `-o`  | stdout            |
-| `--remappings`   | `-r`  | auto              |
+| Option                | Short | Default           |
+| --------------------- | ----- | ----------------- |
+| `--scope`             | `-s`  | `["src"]`         |
+| `--exclude`           | `-e`  | `["lib", "test"]` |
+| `--min-severity`      | `-m`  | `NC`              |
+| `--format`            | `-f`  | `md`              |
+| `--output`            | `-o`  | stdout            |
+| `--remappings`        | `-r`  | auto              |
+| `--exclude-detectors` | `-x`  | none              |
 
 **Priority:** CLI flags > config file > auto-detection
 
@@ -322,7 +331,7 @@ gh attestation verify weasel-<target>.tar.gz --owner slvDev
 
 | Input | Description | Default |
 |-------|-------------|---------|
-| `version` | Weasel version (`latest`, `nightly`, or specific like `0.4.6`) | `latest` |
+| `version` | Weasel version (`latest`, `nightly`, or specific like `0.5.0`) | `latest` |
 | `path` | Path to analyze | `.` |
 | `min-severity` | Minimum severity to report | `Low` |
 | `fail-on` | Fail CI at this severity (`High`, `Medium`, `Low`, `none`) | `none` |
