@@ -273,7 +273,8 @@ jobs:
       - name: Summary
         if: steps.diff.outputs.has_changes == 'true' && always()
         run: |
-          echo "## AI Security Review" >> $GITHUB_STEP_SUMMARY
+          # Overwrite verbose AI action output with clean summary
+          echo "## AI Security Review" > $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ -f findings.json ]; then

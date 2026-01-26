@@ -140,6 +140,7 @@ jobs:
             - Do NOT use `-s` flag - Weasel reads paths from weasel.toml/foundry.toml/hardhat.config
             - Add `-x <detector_id>` for EACH false positive detector you identified
             - The output file MUST be exactly `weasel-filtered.sarif`
+            - NEVER edit or modify the SARIF file after generation. Only `weasel run` should create it.
 
             ## Step 5: Verify Output
             After running the command, verify the file exists:
@@ -185,7 +186,8 @@ jobs:
       - name: Analysis Summary
         if: always()
         run: |
-          echo "## Weasel Security Analysis" >> $GITHUB_STEP_SUMMARY
+          # Overwrite verbose AI action output with clean summary
+          echo "## Weasel Security Analysis" > $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f weasel-filtered.sarif ]; then
             FINDINGS=$(jq '.runs[0].results | length' weasel-filtered.sarif 2>/dev/null || echo "0")
