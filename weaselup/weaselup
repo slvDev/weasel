@@ -85,14 +85,14 @@ USAGE:
     weaselup [OPTIONS]
 
 OPTIONS:
-    -v, --version <VERSION>    Install specific version (e.g., 0.4.6)
+    -v, --version <VERSION>    Install specific version (e.g., 0.5.0)
     --nightly                  Install latest nightly build
     -h, --help                 Show this help message
 
 EXAMPLES:
     weaselup                   Install latest stable version
     weaselup --nightly         Install latest nightly build
-    weaselup -v 0.4.6          Install version 0.4.6
+    weaselup -v 0.5.0          Install version 0.5.0
 EOF
 }
 

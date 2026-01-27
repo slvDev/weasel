@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-26
+
+### Added
+
+#### GitHub Actions
+
+- GitHub Actions integration (`action.yml`) — run Weasel in CI/CD pipelines with `uses: slvDev/weasel@main`
+- SARIF output format (`--format sarif`) for GitHub Code Scanning integration
+- Nightly release workflow — automatic builds from `main` on source changes
+- `weaselup --nightly` flag to install latest nightly build
+- Example workflows in `gh-actions-examples/`:
+  - `weasel-basic.yml` — basic analysis with SARIF upload
+  - `weasel-claude.yml` / `weasel-claude-diff.yml` — Claude-powered review
+  - `weasel-openai.yml` / `weasel-openai-diff.yml` — OpenAI Codex-powered review
+  - `weasel-gemini.yml` / `weasel-gemini-diff.yml` — Gemini-powered review
+- SHA256 checksums and build attestation for release binaries
+
+#### Detector Configuration
+
+- `exclude_detectors` option in `weasel.toml` and CLI (`-x` / `--exclude-detectors`) to skip specific detectors by ID
+- `exclude_detectors` parameter for MCP `weasel_analyze` tool
+- Protocol feature flags in `weasel.toml` `[protocol]` section to disable detector groups:
+  - `uses_fot_tokens` — fee-on-transfer token detectors
+  - `uses_weird_erc20` — non-standard ERC20 detectors
+  - `uses_native_token` — native ETH handling detectors
+  - `uses_l2` — L2-specific detectors (Arbitrum, Optimism)
+  - `uses_nft` — NFT-related detectors
+
+#### MCP & IDE Support
+
+- OpenAI Codex CLI support for `weasel mcp add/remove` (`--target codex`)
+- Gemini CLI support for `weasel mcp add/remove` (`--target gemini`)
+
+### Changed
+
+- Release workflow uses pinned action SHAs and Cargo caching for faster builds
+
 ## [0.4.6] - 2026-01-19
 
 ### Added
@@ -15,7 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `constant-decimals` - prefer constants for decimals
 
 **NC (Non-Critical)**
-- `abstract-in-separate-file` - abstract contracts should be in separate files
 - `array-ranged-getter` - use ranged getter for array access
 - `bool-init-false` - unnecessary boolean initialization to false
 - `nc-combine-mappings` - mappings with same key can be combined into struct
@@ -91,6 +127,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### New Detectors
 
+- `abstract-in-separate-file` - abstract contracts should be in separate files
 - `long-calculations` - flag complex math that may overflow
 - `unchecked-low-level-call` - missing success check on call/delegatecall
 - `upgradable-token-interface` - detect upgradable token patterns
@@ -183,7 +220,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI with configuration file support
 - Basic detectors for common vulnerabilities
 
-[Unreleased]: https://github.com/slvDev/weasel/compare/v0.4.6...HEAD
+[Unreleased]: https://github.com/slvDev/weasel/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/slvDev/weasel/compare/v0.4.6...v0.5.0
 [0.4.6]: https://github.com/slvDev/weasel/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/slvDev/weasel/compare/v0.4.0...v0.4.5
 [0.4.0]: https://github.com/slvDev/weasel/compare/v0.3.1...v0.4.0
